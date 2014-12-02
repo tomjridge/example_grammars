@@ -1,12 +1,20 @@
 (* example specification of a grammar file *)
 open P1_lib
 
-let header = until_a "<<g<<"
+let header = until_a ("<<"^"g<<")
+let start_of_g = a ("<<"^"g<<")
+let end_of_g = a (">>"^"g>>")
+let grammar = until_a (">>"^"g>>")
 let footer = until_EOF
 let ws = parse_RE "[ \n]*"
 
 <<g<<
-S -> ?header? "<<g<<" ?ws? G ?ws? ">>g>>" ?footer? {{ fun (h,(_,(_,(g,(_,(_,f)))))) -> (h,g,f) }}
+
+S -> ?header? ?start_of_g? ?ws? G ?ws? ?end_of_g? ?footer? 
+  {{ fun (h,(_,(_,(g,(_,(_,f)))))) -> print_endline (content g); (h,g,f) }}
+
+G -> ?grammar? {{ fun x -> x }}
+
 >>g>>
 
 let main () = 
@@ -17,7 +25,8 @@ let main () =
 
 let _ = main ()
 
-
+(*
 Local Variables:
 mode: tuareg
 End:
+*)
