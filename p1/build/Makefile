@@ -1,6 +1,6 @@
 SRC_DIR:=../src
 MLS_TO_EXEC:= grammar.ml #
-IGNORE_FOR_LIB:= interactive.ml # don't want these in the lib
+IGNORE_FOR_LIB:= grammar.ml interactive.ml # don't want these in the lib
 MLS_FOR_LIB_1=$(shell ocamlfind ocamldep -sort *.ml)
 MLS_FOR_LIB=$(filter-out $(IGNORE_FOR_LIB), $(MLS_FOR_LIB_1)) # p1_examples.ml is an executable
 CMO=$(MLS_FOR_LIB:.ml=.cmo)
@@ -16,7 +16,10 @@ WARNINGS:=-w -8 #-w -26-8
 COMPFLAGS:=$(WARNINGS)
 
 all: $(P1_GEN) before_all g_to_ml
-	make $(CMO) $(MLS_TO_EXEC:.ml=.native)
+	make cmo
+	make $(MLS_TO_EXEC:.ml=.native)
+
+cmo: $(CMO)
 
 $(P1_GEN): 
 	cd ../../src_ext/p1/build && make
