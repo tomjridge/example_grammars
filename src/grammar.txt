@@ -1,0 +1,9 @@
+header
+
+<<g<<
+
+TEST -> x=TEST TEST z=TEST {{ act(x,y,z) }}
+
+>>g>>
+
+footer

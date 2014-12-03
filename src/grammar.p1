@@ -76,13 +76,31 @@ let sym_to_string x = (match x with
     | `NT x -> x
     | `TM x -> x)
 
+let fun_binding_for_act : symsact -> string = (fun (`SYMSACT (xs,`ACT act)) ->
+    (* number the xs *)
+    let xs = (List.fold_left (fun (n,acc) x -> (n+1,acc@[(n,x)])) (1,[]) xs) |> snd in
+    let xs =
+      let f1 (n,x) = (match x with 
+        | `VSYM(None,sym) -> `VSYM(Some("x"^(string_of_int n)),sym)
+        | `VSYM(Some x,sym) -> `VSYM(Some x, sym))
+      in
+      List.map f1 xs
+    in
+    let vsym_to_var (`VSYM(Some x,sym)) = x in
+    List.fold_left (fun acc x -> String.concat "" ["(";acc;",";(x |> vsym_to_var);")"]) (List.hd xs |> vsym_to_var) (List.tl xs))
+
+(*
+let _ = fun_binding_for_act (`SYMSACT ([`VSYM(None,`NT "E");`VSYM(Some "v",`NT "E");`VSYM(None,`NT "E")],`ACT "act"))
+
+*)
+
 let vsym_to_string (`VSYM (so,sym)) = String.concat "" [
     so |> (fun x -> match x with | None -> "" | Some x -> x^"=");
     sym |> sym_to_string]
 
-let symsact_to_string (`SYMSACT (xs,`ACT act)) = String.concat "" [
+let symsact_to_string x = match x with | (`SYMSACT (xs,`ACT act)) -> String.concat "" [
     (xs |> List.map vsym_to_string |> String.concat " ");
-    " {{";act;"}}"]
+    " {{ fun ";fun_binding_for_act x; " -> "; act;"}}"]
       
 let rule_to_string (`RULE (nt,xs)) = String.concat "" [
     nt; " -> "; xs |> List.map symsact_to_string |> String.concat "\n | "]
@@ -93,7 +111,6 @@ let embedg_to_string (`EMBEDG(h,g,f)) = String.concat "\n" [
     h ^"<<"^"g<<";
     (g |> g_to_string);
     ">>"^"g>>"^f]
-     
 
 let main () = 
   let fname = Sys.argv.(1) in
