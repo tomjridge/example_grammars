@@ -1,5 +1,5 @@
 SRC_DIR:=../src
-MLS_TO_EXEC:= grammar.ml eee.ml eee2.ml eee3.ml #
+MLS_TO_EXEC:= grammar.ml eee.ml eee2.ml eee3.ml ocaml.ml #
 MLS_FOR_LIB:=dummy.ml
 CMO=$(MLS_FOR_LIB:.ml=.cmo)
 

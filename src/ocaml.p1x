@@ -1,0 +1,212 @@
+open P1_lib
+
+let c = content
+
+let ident = parse_RE "[a-z][A-Za-z0-9]*"
+
+let keywords = ["let";"in";"if";"then";"else";"rec";"match";"with"]
+
+let ident x = 
+  x |> ident 
+  |> List.filter (fun (x,_) -> not (List.mem (c x) keywords))
+
+let _Ident = parse_RE "[A-Z][A-Za-z0-9]*"
+
+let reserved_Idents = ["List";"String";"Hashtbl"]
+
+let constr x = x |> _Ident |> List.filter (fun (x,_) -> not (List.mem (c x) reserved_Idents))
+
+let comment = ((a "(*") **> (until_a "*)") **> (a "*)")) >> (fun (x,(y,z)) -> ss_concat [x;y;z])
+let ws = (parse_RE "[ \n]*")
+let ws = ws ||| ((ws **> comment **> ws) >> (fun (x,(y,z)) -> ss_concat [x;y;z]))
+let w = ws
+
+let num = parse_RE "[0-9]+"
+let notdquote = until_a "\""
+let notsquote = until_a "'"
+
+module Map = struct
+  let texify_underscore s = (Str.global_replace (Str.regexp "[_]") "\\_" s) 
+
+  let valuename s = (
+    let f1 s = (
+    "\\textit{"
+    ^(texify_underscore s)
+    ^"}")
+    in 
+    let s = (match s with
+        (* replace these with any ad-hoc transformations of valuenames you need *)
+      | "ss4" -> "ss" 
+      | "lc4" -> "lc"
+      | "oracle4" -> "oracle"
+      | "rules7" -> "rules"
+      | "tmparsers7" -> "tmparsers"
+      | _ -> s)
+    in
+  f1 s)
+
+  let module_name s = "\\textsf{"^s^"}"
+  
+  let module_path s = "\\textsf{"^s^"}"
+  
+  let constr s = "\\textsf{"^(texify_underscore s)^"}"
+  
+  let _type s = s
+  
+  let ident s = s
+
+  (* convert a string to latex whitespace *)
+  let rec to_whitespace s = (
+   if s = "" then "" else
+   let c = s.[0] in
+   if c=' ' then "\\ "^(to_whitespace (String.sub s 1 (String.length s - 1))) else
+   "\\\\\n"^(to_whitespace (String.sub s 1 (String.length s - 1))))
+                                     
+  let w s = to_whitespace(content s)
+
+end (* Map *)
+
+<<g<<
+
+S -> VALUENAME {{ x1 }}
+
+(* 6.3 Names *)                       
+
+VALUENAME -> ?ident?                   {{ Map.valuename(c x1) }}                                       
+                                      
+INFIXOP -> "="                         {{ c x1 }}                                              
+  | "++"                               {{ c x1 }}                                                
+  | "::"                               {{ c x1 (* FIXME not an infix ?*) }}                      
+  | "<"                                {{ c x1 }}                                                      
+  | "<="                               {{ "{\\le}" }}                                                  
+
+  | "+"                                {{ c x1 (* FIXME not an infix ?*) }}                      
+  | "@"                                {{ "++" (* FIXME not an infix ?*) }}                           
+  | "&&"                               {{ "{\\&\\&}" }}                                               
+  | "||"                               {{ c x1 }}                                               
+  | "***>"                             {{ "{\\otimes}" }}                                                 
+  | "||||"                             {{ "{\\oplus}" }}                                                  
+  | ">>>>"                             {{ "{\\gg}" }}                                          
+  | ">>="                              {{ "{{\\gg}\\!\\!=}" }}                                    
+  | "|||"                              {{ c x1 }}                                                     
+
+FIELDNAME -> ?ident?                   {{ Map.valuename(c x1) }}                                                      
+                                     
+
+VALUEPATH -> VALUENAME       {{ x1 }}                          
+  | MODULEPATH "." VALUENAME {{ x1^"."^x3 }}
+
+(* this was ?Ident? but we don't want List.map interpreted as CONSTR.FIELDNAME *)
+CONSTR ->                 
+    ?constr?               {{ Map.constr (c x1) }}                           
+                          
+MODULEPATH -> ?_Ident?      {{ Map.module_path (c x1) }}                      
+  | MODULEPATH "." ?_Ident? {{ x1^"."^(Map.module_path (c x3)) }}
+
+
+
+(* 6.5 Constants *)
+
+CONSTANT -> CONSTR      {{ x1 }}                                          
+  | "[" ?w? "]"         {{ "["^(Map.w x2)^"]" }}            
+  | ?num?               {{ c x1 }}                                           
+  | "-" ?num?           {{ (c x1)^(c x2) }}                
+  | '"' s=?notdquote? '"' {{ ("{\\texttt{\"" ^ (c s) ^ "\"} }") }}
+  | "'" s=?notsquote? "'" {{ ("'"^(c s)^"'") }}            
+  | "()"                {{ c x1 }}                                           
+
+
+TYPEXPR -> TYPEXPR {{ x1 }} (* FIXME placeholder *)
+
+(* 6.6 Patterns *)
+
+PATTERN -> EXPR {{ x1 }} 
+
+(* 6.7 Expressions ; grammar is too ambiguous so we identify atomic expressions which can be arguments to functions *)
+                                                       
+EXPR -> ATEXPR                                            {{ x1 }}                                                                                                                         
+  | e=EXPR ":" t=TYPEXPR                                  {{ e^":"^t }}                                                                                                   
+  | EXPR ?w? "," ?w? EXPRA                                {{ x1^(Map.w x2)^(c x3)^(Map.w x4)^x5 }}                                                                                                                     
+  | CONSTR ?w? EXPR                                       {{ x1^(Map.w x2)^x3 }}                                                                                           
+  | EXPR ?w? "::" ?w? EXPR                                {{ x1^(Map.w x2)^(c x3)^(Map.w x4)^x5 }}                                                                                                                    
+  | FNARGS                                                {{ x1  }}                                                                                                              
+  | EXPR ?w? INFIXOP ?w? EXPR                             {{ x1^(Map.w x2)^(x3)^(Map.w x4)^x5 }}                                                                         
+  | "if" w1=?w? e1=EXPR w2=?w? "then" w3=?w? e2=EXPR w4=?w? "else" w5=?w? e3=EXPR 
+    {{ ("\\textsf{if}"^(Map.w w1)^e1^(Map.w w2)^"\\textsf{then}"^(Map.w w3)^e2^(Map.w w4)^"\\textsf{else}"^(Map.w w5)^e3) }}
+  | "match" w1=?w? e=EXPR w2=?w? "with" w3=?w? cs=PATTERNMATCHING w4=?w? "end"   
+    {{ ("\\textsf{match}"^(Map.w w1)^e^(Map.w w2)^"\\textsf{with}"^(Map.w w3)^((*String.concat "||"*) cs)^(Map.w w4)^("\\textsf{end}")) }}            
+  | "let" w1=?w? e1=LETBINDING w2=?w? "in" w3=?w? e2=EXPR 
+    {{ "\\textsf{let}"^(Map.w w1)^e1^(Map.w w2)^"\\textsf{in}"^(Map.w w3)^e2 }}                                                
+  | "let" w0=?w? "rec" w1=?w? e1=LETBINDING w2=?w? "in" w3=?w? e2=EXPR
+    {{ "\\textsf{let}"^(Map.w w0)^"rec"^(Map.w w1)^e1^(Map.w w2)^"\\textsf{in}"^(Map.w w3)^e2 }}                                                
+  | "fun" w1=?w? e1=MULTIPLEMATCHING                            
+    {{ "\\textsf{fun}"^(Map.w w1)^e1 }}                                                                                         
+(* FIXME List.map parses as ATEXPR "." FIELDNAME, where ATEXPR is CONSTANT CONSTR *)
+
+ATEXPR ->                    
+    VALUEPATH                 {{ x1 }}                                                             
+  | CONSTANT                  {{ x1 }}                                                             
+  | "(" w1=?w? e1=EXPR w2=?w? ")" {{ "("^(Map.w w1)^e1^(Map.w w2)^")" }}           
+  | "[" w1=?w? ss=EXPRLIST w2=?w? "]"  {{  "["^(Map.w w1)^ss^(Map.w w2)^"]" }}           
+  | RECORD                    {{ x1 }}                                                     
+  | s1=ATEXPR "." s2=FIELDNAME      {{  s1^"."^s2 (* FIXME rec select *)  }}           
+  | s1=ATEXPR "." "[" s2=EXPR "]"   {{  s1^".["^s2^"]"  }}                     
+  | "_"                       {{ "\\_" }} (* FIXME this just because PATTERNs are EXPRs *)
+  | "<fun>"                   {{ "<\\textit{fun}>" (* "{<{\\textit{fun}>}" *) }} (* for return values from ocaml toplevel *)
+  | "(" w1=?w? s1=INFIXOP w2=?w? ")"  {{ "("^(Map.w w1)^s1^(Map.w w2)^")" }}
+                             
+EXPRA -> EXPR                 {{ x1 }}                                                             
+  | EXPR ?w? "," ?w? EXPRA    {{ x1^(Map.w x2)^(c x3)^(Map.w x4)^x5 }}                                                         
+
+EXPRLIST ->                  
+    EXPR                      {{ x1 }}                                                             
+  | EXPR ?w? ";" ?w? EXPRLIST {{ x1^(Map.w x2)^(c x3)^(Map.w x4)^x5 }}                                                         
+                             
+
+PATTERNMATCHING -> CASESB     {{ x1 }}                                                      
+  | "|" w1=?w? x=CASESB       {{ "|"^(Map.w w1)^x (* initial | *) }}                 
+                             
+CASESB ->                    
+  CASE                        {{ x1 }}                                                     
+  | c1=CASE w1=?w? "|" w2=?w? cs=CASESB   {{ c1^(Map.w w1)^"|"^(Map.w w2)^cs }}           
+(* above clause erroneously allows cases to start with a bar *)
+                                                               
+CASE -> e1=PATTERN w1=?w? "->" w2=?w? e2=EXPR                {{ e1^(Map.w w1)^"{\\rightarrow}"^(Map.w w2)^e2^"" }}                                                  
+                                                
+MULTIPLEMATCHING -> PATTERNMATCHING              {{ x1 }} (* FIXME *)                                                                                                           
+
+LETBINDING -> PATTERN ?w? "=" ?w? EXPR           {{ x1^(Map.w x2)^(c x3)^(Map.w x4)^x5 }}                                                                                                                   
+
+
+                                                
+FNARGS -> ATEXPR ?w? ATEXPR                      {{ x1^(Map.w x2)^x3 }}                                                                                         
+  | ATEXPR ?w? FNARGS                            {{ x1^(Map.w x2)^x3 }}                                                                                         
+                                                
+RECORD ->                                       
+    "<|" w1=?w? fs=FIELDS w2=?w? "|>"                       {{ "\\langle{}"^(Map.w w1)^(fs)^(Map.w w2)^"\\rangle{}" }}                                                 
+  | "<|" w1=?w? i=ATEXPR w2=?w? "with" w3=?w? fs=FIELDS w4=?w? "|>" {{ "\\langle{}"^(Map.w w1)^i^(Map.w w2)^"\\textsf{with}"^(Map.w w3)^fs^(Map.w w4)^"\\rangle{}" }}
+                                                
+FIELDS ->                                       
+    FIELD                                        {{ x1 }}                                                                                                                       
+  | FIELD ?w? ";" ?w? FIELDS                     {{ x1^(Map.w x2)^(c x3)^(Map.w x4)^x5 }}                                                                                                                   
+                                                
+FIELD ->                                        
+    f=?ident? w1=?w? "=" w2=?w? e=EXPR           {{ (Map.valuename (c f))^(Map.w w1)^"="^(Map.w w2)^e }}                                                                     
+
+
+
+>>g>>
+
+let main () = 
+  let fname = Sys.argv.(1) in
+  let Some txt = read_file_as_string fname in
+  let eg = run_parser_string parse_S txt in
+  ()
+
+let _ = main ()
+
+(*
+Local Variables:
+mode: tuareg
+End:
+*)
