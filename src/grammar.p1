@@ -35,7 +35,7 @@ type nt_string = string
 type sym = [`NT of nt_string | `TM of string]
 type act = [`ACT of string * string]
 type vsym = [`VSYM of string option * sym]
-type symsact = [`SYMSACTS of vsym list * act]
+type symsact = [`SYMSACT of vsym list * act]
 type symsacts = [`SYMSACTS of vsym list * act list]
 type rule = [`RULE of nt_string * symsacts list]
 type g = [`RULES of rule list]
@@ -117,34 +117,80 @@ let vsym_to_string (`VSYM (so,sym)) = String.concat "" [
     so |> (fun x -> match x with | None -> "" | Some x -> x^"=");
     sym |> sym_to_string]
 
-let symsact_to_string x = match x with | (`SYMSACT (xs,`ACT (tag,act))) -> 
+let symsact_to_string : symsact -> string = fun (`SYMSACT (xs,`ACT (tag,act))) -> 
   (* remove var bindings because we are transforming into a grammar without extensions *)
   let ys = List.map (fun (`VSYM (so,sym)) -> `VSYM(None,sym)) xs in
   String.concat "" [
     (ys |> List.map vsym_to_string |> String.concat " ");
     " {{ fun ";(`SYMSPAIR(xs,()) |> fun_binding_for_act); " -> "; act;"}}"]
 
-let symsacts_to_string : symsacts -> string = fun x -> match x with | (`SYMSACTS (xs,acts)) -> 
-  let act = (match acts with | act::_ -> act | _ -> failwith "symsacts_to_string") in
+(* tag for actions *)
+type tag = string
+
+let symsacts_to_string : tag -> symsacts -> string = fun tag x -> match x with | (`SYMSACTS (xs,acts)) -> 
+  let Some(act) = 
+    try 
+      Some(List.find (fun (`ACT(tag',_)) -> tag'=tag) acts) 
+    with _ -> try
+        Some(List.find (fun (`ACT(tag',_)) -> tag'="") acts)  (* default to usign the tag "" *)
+      with _ -> None
+  in
   (`SYMSACT(xs,act) |> symsact_to_string)
   
       
-let rule_to_string : rule -> string = fun (`RULE (nt,xs)) -> String.concat "" [
-    nt; " -> "; xs |> List.map symsacts_to_string |> String.concat "\n | "]
+let rule_to_string : tag -> rule -> string = fun tag (`RULE (nt,xs)) -> String.concat "" [
+    nt; " -> "; xs |> List.map (symsacts_to_string tag) |> String.concat "\n | "]
 
-let g_to_string (`RULES xs) = (xs |> List.map rule_to_string |> String.concat "\n")
+let g_to_string : tag -> g -> string = fun tag (`RULES xs) -> (xs |> List.map (rule_to_string tag) |> String.concat "\n")
 
-let embedg_to_string (`EMBEDG(h,g,f)) = String.concat "\n" [
+let embedg_to_string tag (`EMBEDG(h,g,f)) = String.concat "\n" [
     h ^"<<"^"g<<";
-    (g |> g_to_string);
+    (g |> (g_to_string tag));
     ">>"^"g>>"^f]
 
+
+open P1_extra_combinators
+open P1_cl
+
+type ty_cl_args = { file: string; tag:string }
+let cl0 = { file=""; tag=""  }
+
+(* precedence to earlier args *)
+let rec parse_CL = fun i -> (
+  let f1 cl (f,xs) = (match (f,xs) with
+    | ("-tag",[x]) -> {cl with tag=x }
+    | _ -> (failwith ("parse_CL: unrecognized flag/arg combination: "^f^" "^(String.concat " " xs))))
+  in
+  let sep = a "\x00" in
+  (((listof parse_FLARGS sep) **> sep **> parse_ARG **> parse_EOF) >> (fun (xs,(_,(x,_))) -> List.fold_left f1 {cl0 with file=x} xs))) i
+
+type 'a or_error = OK of 'a | Error of string
+
+let ( |>> ) x f = (match x with
+    | OK x -> f x
+    | Error y -> Error y)
+
+
+
 let main () = 
-  let fname = Sys.argv.(1) in
-  let Some txt = read_file_as_string fname in
-  let eg = run_parser_string parse_S txt in
-  let _ = eg |> List.map fst |> List.map embedg_to_string |> List.map print_string in
-  ()
+  let command = "grammar" in
+  (try OK (get_args parse_CL Sys.argv) with Failure s -> Error s)
+  |>> (fun args -> 
+      if (args.file="") then 
+        Error (command^": require a file as argument")
+      else
+        OK args)
+  |>> (fun args ->
+      match read_file_as_string args.file with 
+      | Some x -> OK (x,args.tag) 
+      | None -> Error (command^": couldn't read file: "^args.file))
+  |>> (fun (txt,tag) -> 
+      let eg = run_parser_string parse_S txt in
+      let _ = eg |> List.map fst |> List.map (embedg_to_string tag) |> List.map print_string in
+      OK ())
+  |> (function
+      | Error s -> failwith s
+      | OK () -> ())
 
 let _ = main ()
 

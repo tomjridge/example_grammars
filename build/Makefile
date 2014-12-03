@@ -1,5 +1,5 @@
 SRC_DIR:=../src
-MLS_TO_EXEC:= grammar.ml eee.ml eee2.ml #
+MLS_TO_EXEC:= grammar.ml eee.ml eee2.ml eee3.ml #
 MLS_FOR_LIB:=dummy.ml
 CMO=$(MLS_FOR_LIB:.ml=.cmo)
 
@@ -28,17 +28,26 @@ $(P1_GEN):
 P1X:=$(wildcard *.p1x)
 x_to_g: $(P1X:.p1x=.p1)
 
-GS:=$(wildcard *.p1)
-g_to_ml: $(GS:.p1=.ml) 
+P1S:=$(wildcard *.p1)
+g_to_ml: $(P1S:.p1=.ml) 
 
 include Makefile.include
 
+eee3.p1: eee3.p1x grammar.native
+	rm -f $@
+	./grammar.native -tag a2 $< >$@
+	chmod u-w $@
+
 .SUFFIXES: .p1 .p1x
 .p1.ml:
+	rm -f $@
 	$(P1_GEN) -g $< > $@
+	chmod u-w $@
 
 .p1x.p1: 
+	rm -f $@
 	./grammar.native $< > $@
+	chmod u-w $@
 
 clean:
 	rm -f $(GS:.p1=.ml) *.p1x *.txt
