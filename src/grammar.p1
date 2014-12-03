@@ -12,7 +12,18 @@ let start_of_g = a ("<<"^"g<<")
 let end_of_g = a (">>"^"g>>")
 let grammar = until_a (">>"^"g>>")
 let footer = until_EOF
-let ws = parse_RE "[ \n]*"
+let ws = (parse_RE "[ \n]*")
+
+let ss_concat_2 : 'a substring -> 'a substring -> 'a substring = fun (`SS(s,i,k)) (`SS(s',k',j)) ->
+  assert(k'=k && s'=s);
+  `SS(s,i,j)
+
+let rec ss_concat xs = (match xs with
+  | [x] -> x
+  | x::xs -> (ss_concat_2 x (ss_concat xs)))
+
+let comment = ((a "(*") **> (until_a "*)") **> (a "*)")) >> (fun (x,(y,z)) -> ss_concat [x;y;z])
+let ws = ws ||| ((ws **> comment **> ws) >> (fun (x,(y,z)) -> ss_concat [x;y;z]))
 
 let nt = parse_RE "[A-Z]+"
 let not_dquote = until_a "\""

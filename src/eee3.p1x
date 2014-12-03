@@ -1,10 +1,14 @@
-(* example specification of a grammar file; allows named vars; allows multiple actions; if no action for a tag, use the default *)
+(* example specification of a grammar file; allows named vars; allows
+   multiple actions; if no action for a tag, use the default; also
+   comments *)
 open P1_lib
 
 let ws = parse_RE "[ \n]*"
 let eof = parse_EOF
 
 <<g<<
+
+(* this is a comment *)
 
 S -> E ?ws? ?eof? {{ print_endline (x1 |> string_of_int) }}
 E -> x=E y=E z=E 
