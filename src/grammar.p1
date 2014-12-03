@@ -1,4 +1,4 @@
-(* example specification of a grammar file *)
+(* example specification of a grammar file; allows named vars; *)
 open P1_lib
 
 let header = until_a ("<<"^"g<<")
@@ -20,40 +20,86 @@ let act = (a "{{") **> until_a "}}" **> (a "}}") >> (fun (_,(x,_)) -> x)
 let c = content
 let id = fun x -> x
 
+let var = parse_RE "[a-z][a-z0-9]*"
+
+let eps = a ""
+
+type nt_string = string
+type sym = [`NT of nt_string | `TM of string]
+type act = [`ACT of string]
+type vsym = [`VSYM of string option * sym]
+type symsact = [`SYMSACT of vsym list * act]
+type rule = [`RULE of nt_string * symsact list]
+type g = [`RULES of rule list]
+type embedded_g = [`EMBEDG of string * g * string]
+
 <<g<<
 
 S -> ?header? ?start_of_g? ?ws? G ?ws? ?end_of_g? ?footer? 
-  {{ fun (h,(_,(_,(g,(_,(_,f)))))) -> print_endline "parsed (content g)"; (h,g,f) }}
+  {{ fun (h,(_,(_,(g,(_,(_,f)))))) -> `EMBEDG(c h,g,c f) }}
 
 G -> RULES {{ fun x -> `RULES x }}
-| ?fixme? {{ fun x -> `RULES [] (* FIXME *) }}
 
 RULES -> RULE     {{ fun x -> [x] }}
 | RULE ?ws? RULES {{ fun (x,(_,y)) -> x::y }}
 
-RULE -> ?nt? ?ws? "->" ?ws? RHS {{ fun (nt,(_,(_,(_,rhs)))) -> `RULE(nt,rhs) }}
+RULE -> ?nt? ?ws? "->" ?ws? RHS {{ fun (nt,(_,(_,(_,rhs)))) -> `RULE(c nt,rhs) }}
 
 RHS -> SYMSACT              {{ fun x -> [x] }}
 | SYMSACT ?ws? "|" ?ws? RHS {{ fun (x,(_,(_,(_,xs)))) -> x::xs }}
 
-SYMSACT -> SYMS ?ws? ACT {{ fun (x,(_,y)) -> `SYMSACT(x,y) }}
+SYMSACT -> VSYMS ?ws? ACT {{ fun (x,(_,y)) -> `SYMSACT(x,y) }}
 
-SYMS -> SYM     {{ fun x -> [x] }}
-| SYM ?ws? SYMS {{ fun (x,(_,y)) -> x::y }}
+VSYMS -> VSYM     {{ fun x -> [x] }}
+| VSYM ?ws? VSYMS {{ fun (x,(_,y)) -> x::y }}
 
-ACT -> ?act? {{ id }}
+VSYM -> VAROPT SYM {{ fun (x,y) -> `VSYM(x,y) }}
+
+ACT -> ?act? {{ fun x -> `ACT (c x) }}
+
+VAROPT -> ?eps? {{ fun _ -> None }}
+| ?var? "=" {{ fun (x,_) -> Some(c x) }}
 
 SYM -> ?nt?             {{ fun x -> `NT (c x) }}
 | "?" ?not_q? "?"       {{ fun (_,(x,_)) -> `TM ("?"^(c x)^"?") }}
 | '"' ?not_dquote? '"'  {{ fun (_,(x,_)) -> `TM ("\""^(c x)^"\"") }}
-| "'" ?not_squote? "'"  {{ fun (_,(x,_)) -> `TM ("\""^(c x)^"\"") }}
+| "'" ?not_squote? "'"  {{ fun (_,(x,_)) -> `TM ("'"^(c x)^"'") }}
 
+TYPECHECK -> VSYM {{ fun (x:vsym) -> failwith "FIXME typechecking only" }}
+| SYMSACT {{ fun (x:symsact) -> failwith "FIXME typechecking only" }}
+| RULE {{ fun (x:rule) -> failwith "FIXME typechecking only" }}
+| G {{ fun (x:g) -> failwith "FIXME typechecking only" }}
+| S {{ fun (x:embedded_g) -> failwith "FIXME typechecking only" }}
 >>g>>
+
+let sym_to_string x = (match x with
+    | `NT x -> x
+    | `TM x -> x)
+
+let vsym_to_string (`VSYM (so,sym)) = String.concat "" [
+    so |> (fun x -> match x with | None -> "" | Some x -> x^"=");
+    sym |> sym_to_string]
+
+let symsact_to_string (`SYMSACT (xs,`ACT act)) = String.concat "" [
+    (xs |> List.map vsym_to_string |> String.concat " ");
+    " {{";act;"}}"]
+      
+let rule_to_string (`RULE (nt,xs)) = String.concat "" [
+    nt; " -> "; xs |> List.map symsact_to_string |> String.concat "\n | "]
+
+let g_to_string (`RULES xs) = (xs |> List.map rule_to_string |> String.concat "\n")
+
+let embedg_to_string (`EMBEDG(h,g,f)) = String.concat "\n" [
+    h ^"<<"^"g<<";
+    (g |> g_to_string);
+    ">>"^"g>>"^f]
+     
 
 let main () = 
   let fname = Sys.argv.(1) in
   let Some txt = read_file_as_string fname in
-  let _ = run_parser_string parse_S txt in
+  let eg = run_parser_string parse_S txt in
+  let _ = eg |> List.map fst |> List.map embedg_to_string |> List.map print_string in
   ()
 
 let _ = main ()
