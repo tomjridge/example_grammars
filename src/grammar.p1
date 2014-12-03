@@ -162,7 +162,8 @@ let rec parse_CL = fun i -> (
     | _ -> (failwith ("parse_CL: unrecognized flag/arg combination: "^f^" "^(String.concat " " xs))))
   in
   let sep = a "\x00" in
-  (((listof parse_FLARGS sep) **> sep **> parse_ARG **> parse_EOF) >> (fun (xs,(_,(x,_))) -> List.fold_left f1 {cl0 with file=x} xs))) i
+  (((listof parse_FLARGS sep) **> sep **> parse_ARG **> parse_EOF) >> (fun (xs,(_,(x,_))) -> List.fold_left f1 {cl0 with file=x} xs))
+  ||| ((parse_ARG **> parse_EOF) >> (fun (x,_) -> {cl0 with file=x}))) i
 
 type 'a or_error = OK of 'a | Error of string
 

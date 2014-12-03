@@ -50,7 +50,7 @@ eee3.p1: eee3.p1x grammar.native
 	chmod u-w $@
 
 clean:
-	rm -f $(GS:.p1=.ml) *.p1x *.txt
+	rm -f $(GS:.p1=.ml) *.p1x *.p1 *.txt
 	rm -f $(GS)
 	rm -f *.ml *.mli *.cmo *.cmi *.cmx *.native *.a *.o *.cma *.cmxa .depend
 	rm -rf ocamldoc
