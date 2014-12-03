@@ -1,8 +1,6 @@
 SRC_DIR:=../src
-MLS_TO_EXEC:= grammar.ml eee.ml #
-IGNORE_FOR_LIB:= grammar.ml interactive.ml # don't want these in the lib
-MLS_FOR_LIB_1=$(shell ocamlfind ocamldep -sort *.ml)
-MLS_FOR_LIB=$(filter-out $(IGNORE_FOR_LIB), $(MLS_FOR_LIB_1)) # p1_examples.ml is an executable
+MLS_TO_EXEC:= grammar.ml eee.ml eee2.ml #
+MLS_FOR_LIB:=dummy.ml
 CMO=$(MLS_FOR_LIB:.ml=.cmo)
 
 LIB:=lib
@@ -16,6 +14,8 @@ WARNINGS:=-w -8 #-w -26-8
 COMPFLAGS:=$(WARNINGS)
 
 all: $(P1_GEN) before_all 
+	make grammar.native
+	make x_to_g
 	make g_to_ml
 	make cmo
 	make $(MLS_TO_EXEC:.ml=.native)
@@ -25,8 +25,11 @@ cmo: $(CMO)
 $(P1_GEN): 
 	cd ../src_ext/p1/build && make
 
+P1X:=$(wildcard *.p1x)
+x_to_g: $(P1X:.p1x=.p1)
+
 GS:=$(wildcard *.p1)
-g_to_ml: $(GS:.p1=.ml)
+g_to_ml: $(GS:.p1=.ml) 
 
 include Makefile.include
 
@@ -34,11 +37,11 @@ include Makefile.include
 .p1.ml:
 	$(P1_GEN) -g $< > $@
 
-.p1x.p1: grammar.native
-	grammar.native $< > $@
+.p1x.p1: 
+	./grammar.native $< > $@
 
 clean:
-	rm -f $(GS:.p1=.ml)
+	rm -f $(GS:.p1=.ml) *.p1x *.txt
 	rm -f $(GS)
 	rm -f *.ml *.mli *.cmo *.cmi *.cmx *.native *.a *.o *.cma *.cmxa .depend
 	rm -rf ocamldoc

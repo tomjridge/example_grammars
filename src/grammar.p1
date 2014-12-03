@@ -1,5 +1,11 @@
-(* example specification of a grammar file; allows named vars; *)
+(* example specification of a grammar file; allows named vars; parse a
+   .p1x (with named vars) embedded grammar and output a .p1 embedded
+   grammar; also, if there are multiple action clauses, then output
+   each to a file: if the act is {bbb{ ... }} then output to xxxbbb.p1
+   where xxx is the name of the original file *)
 open P1_lib
+
+let c = content
 
 let header = until_a ("<<"^"g<<")
 let start_of_g = a ("<<"^"g<<")
@@ -15,9 +21,10 @@ let not_q = until_a "?"
 
 let fixme = parse_RE "FIXME"
 
-let act = (a "{{") **> until_a "}}" **> (a "}}") >> (fun (_,(x,_)) -> x)
+let open_act = ((a "{") **> (until_a "{") **> (a "{")) >> (fun (_,(tag,_)) -> (c tag))
 
-let c = content
+let act = (open_act **> until_a "}}" **> (a "}}")) >> (fun (tag,(x,_)) -> `ACT(tag,c x))
+
 let id = fun x -> x
 
 let var = parse_RE "[a-z][a-z0-9]*"
@@ -26,10 +33,11 @@ let eps = a ""
 
 type nt_string = string
 type sym = [`NT of nt_string | `TM of string]
-type act = [`ACT of string]
+type act = [`ACT of string * string]
 type vsym = [`VSYM of string option * sym]
-type symsact = [`SYMSACT of vsym list * act]
-type rule = [`RULE of nt_string * symsact list]
+type symsact = [`SYMSACTS of vsym list * act]
+type symsacts = [`SYMSACTS of vsym list * act list]
+type rule = [`RULE of nt_string * symsacts list]
 type g = [`RULES of rule list]
 type embedded_g = [`EMBEDG of string * g * string]
 
@@ -45,17 +53,20 @@ RULES -> RULE     {{ fun x -> [x] }}
 
 RULE -> ?nt? ?ws? "->" ?ws? RHS {{ fun (nt,(_,(_,(_,rhs)))) -> `RULE(c nt,rhs) }}
 
-RHS -> SYMSACT              {{ fun x -> [x] }}
-| SYMSACT ?ws? "|" ?ws? RHS {{ fun (x,(_,(_,(_,xs)))) -> x::xs }}
+RHS -> SYMSACTS              {{ fun x -> [x] }}
+| SYMSACTS ?ws? "|" ?ws? RHS {{ fun (x,(_,(_,(_,xs)))) -> x::xs }}
 
-SYMSACT -> VSYMS ?ws? ACT {{ fun (x,(_,y)) -> `SYMSACT(x,y) }}
+SYMSACTS -> VSYMS ?ws? ACTS {{ fun (x,(_,y)) -> `SYMSACTS(x,y) }}
 
 VSYMS -> VSYM     {{ fun x -> [x] }}
 | VSYM ?ws? VSYMS {{ fun (x,(_,y)) -> x::y }}
 
 VSYM -> VAROPT SYM {{ fun (x,y) -> `VSYM(x,y) }}
 
-ACT -> ?act? {{ fun x -> `ACT (c x) }}
+ACTS -> ACT     {{ fun x -> [x] }}
+| ACT ?ws? ACTS {{ fun (x,(_,y)) -> x::y }}
+
+ACT -> ?act? {{ id }}
 
 VAROPT -> ?eps? {{ fun _ -> None }}
 | ?var? "=" {{ fun (x,_) -> Some(c x) }}
@@ -66,7 +77,7 @@ SYM -> ?nt?             {{ fun x -> `NT (c x) }}
 | "'" ?not_squote? "'"  {{ fun (_,(x,_)) -> `TM ("'"^(c x)^"'") }}
 
 TYPECHECK -> VSYM {{ fun (x:vsym) -> failwith "FIXME typechecking only" }}
-| SYMSACT {{ fun (x:symsact) -> failwith "FIXME typechecking only" }}
+| SYMSACTS {{ fun (x:symsacts) -> failwith "FIXME typechecking only" }}
 | RULE {{ fun (x:rule) -> failwith "FIXME typechecking only" }}
 | G {{ fun (x:g) -> failwith "FIXME typechecking only" }}
 | S {{ fun (x:embedded_g) -> failwith "FIXME typechecking only" }}
@@ -76,7 +87,10 @@ let sym_to_string x = (match x with
     | `NT x -> x
     | `TM x -> x)
 
-let fun_binding_for_act : symsact -> string = (fun (`SYMSACT (xs,`ACT act)) ->
+
+type 'a symspair = [ `SYMSPAIR of vsym list * 'a]
+
+let fun_binding_for_act : 'a symspair -> string = (fun (`SYMSPAIR (xs,_)) ->
     (* number the xs *)
     let xs = (List.fold_left (fun (n,acc) x -> (n+1,acc@[(n,x)])) (1,[]) xs) |> snd in
     let xs =
@@ -103,12 +117,20 @@ let vsym_to_string (`VSYM (so,sym)) = String.concat "" [
     so |> (fun x -> match x with | None -> "" | Some x -> x^"=");
     sym |> sym_to_string]
 
-let symsact_to_string x = match x with | (`SYMSACT (xs,`ACT act)) -> String.concat "" [
-    (xs |> List.map vsym_to_string |> String.concat " ");
-    " {{ fun ";fun_binding_for_act x; " -> "; act;"}}"]
+let symsact_to_string x = match x with | (`SYMSACT (xs,`ACT (tag,act))) -> 
+  (* remove var bindings because we are transforming into a grammar without extensions *)
+  let ys = List.map (fun (`VSYM (so,sym)) -> `VSYM(None,sym)) xs in
+  String.concat "" [
+    (ys |> List.map vsym_to_string |> String.concat " ");
+    " {{ fun ";(`SYMSPAIR(xs,()) |> fun_binding_for_act); " -> "; act;"}}"]
+
+let symsacts_to_string : symsacts -> string = fun x -> match x with | (`SYMSACTS (xs,acts)) -> 
+  let act = (match acts with | act::_ -> act | _ -> failwith "symsacts_to_string") in
+  (`SYMSACT(xs,act) |> symsact_to_string)
+  
       
-let rule_to_string (`RULE (nt,xs)) = String.concat "" [
-    nt; " -> "; xs |> List.map symsact_to_string |> String.concat "\n | "]
+let rule_to_string : rule -> string = fun (`RULE (nt,xs)) -> String.concat "" [
+    nt; " -> "; xs |> List.map symsacts_to_string |> String.concat "\n | "]
 
 let g_to_string (`RULES xs) = (xs |> List.map rule_to_string |> String.concat "\n")
 
