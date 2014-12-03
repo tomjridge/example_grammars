@@ -1,0 +1,28 @@
+(* example specification of a grammar file; allows named vars; *)
+open P1_lib
+
+let ws = parse_RE "[ \n]*"
+let eof = parse_EOF
+
+<<g<<
+
+S -> E ?ws? ?eof? {{ print_endline (x1 |> string_of_int) }}
+E -> x=E y=E z=E {{ x+y+z }}
+| "1"  {{ 1 }}
+| ""   {{ 0 }}
+
+>>g>>
+
+let main () = 
+  let fname = Sys.argv.(1) in
+  let Some txt = read_file_as_string fname in
+  let eg = run_parser_string parse_S txt in
+  ()
+
+let _ = main ()
+
+(*
+Local Variables:
+mode: tuareg
+End:
+*)

@@ -1,5 +1,5 @@
 SRC_DIR:=../src
-MLS_TO_EXEC:= grammar.ml #
+MLS_TO_EXEC:= grammar.ml eee.ml #
 IGNORE_FOR_LIB:= grammar.ml interactive.ml # don't want these in the lib
 MLS_FOR_LIB_1=$(shell ocamlfind ocamldep -sort *.ml)
 MLS_FOR_LIB=$(filter-out $(IGNORE_FOR_LIB), $(MLS_FOR_LIB_1)) # p1_examples.ml is an executable
@@ -30,9 +30,12 @@ g_to_ml: $(GS:.p1=.ml)
 
 include Makefile.include
 
-.SUFFIXES: .p1
+.SUFFIXES: .p1 .p1x
 .p1.ml:
 	$(P1_GEN) -g $< > $@
+
+.p1x.p1: grammar.native
+	grammar.native $< > $@
 
 clean:
 	rm -f $(GS:.p1=.ml)

@@ -87,7 +87,12 @@ let fun_binding_for_act : symsact -> string = (fun (`SYMSACT (xs,`ACT act)) ->
       List.map f1 xs
     in
     let vsym_to_var (`VSYM(Some x,sym)) = x in
-    List.fold_left (fun acc x -> String.concat "" ["(";acc;",";(x |> vsym_to_var);")"]) (List.hd xs |> vsym_to_var) (List.tl xs))
+    (* left assoc List.fold_left (fun acc x -> String.concat "" ["(";acc;",";(x |> vsym_to_var);")"]) (List.hd xs |> vsym_to_var) (List.tl xs) *)
+    let rec f1 xs = (match xs with
+        | [vsym] -> (vsym |> vsym_to_var)
+        | x::xs -> (String.concat "" ["(";(x |> vsym_to_var);",";f1 xs;")"]))
+    in
+    f1 xs)
 
 (*
 let _ = fun_binding_for_act (`SYMSACT ([`VSYM(None,`NT "E");`VSYM(Some "v",`NT "E");`VSYM(None,`NT "E")],`ACT "act"))
