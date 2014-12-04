@@ -54,8 +54,8 @@ module T4 = struct
   let c = T1.c
   let eof = parse_EOF ()
   let num = p1_to_p4 T1.num
-  let notdquote = p1_to_p4 T1.num
-  let notsquote = p1_to_p4 T1.num
+  let notdquote = p1_to_p4 T1.notdquote
+  let notsquote = p1_to_p4 T1.notsquote
   let _Ident = p1_to_p4 T1._Ident
 
   let ident = p1_to_p4 T1.ident  
