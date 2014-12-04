@@ -114,8 +114,7 @@ module Tex = struct
   let rec to_whitespace s = (
    if s = "" then "" else
    let c = s.[0] in
-   if c=' ' then "\\ "^(to_whitespace (String.sub s 1 (String.length s - 1))) else
-   "\\\\\n"^(to_whitespace (String.sub s 1 (String.length s - 1))))
+   (if c='\n' then "\\\\\n" else "\\ ")^(to_whitespace (String.sub s 1 (String.length s - 1))))
                                      
   let w s = to_whitespace(content s)
 
