@@ -29,6 +29,7 @@ all: $(P1_GEN) before_all
 
 test:
 	./ocaml.native os_command.lem
+	./ocaml_p4.native os_command.lem
 
 cmo: $(CMO)
 
@@ -83,7 +84,7 @@ eee3.p1: eee3.p1x grammar.native
 
 
 clean:
-	rm -f $(GS:.p1=.ml) *.p1x *.p1 *.txt
+	rm -f $(GS:.p1=.ml) *.cppo *.p4 *.p4x *.p1x *.p1 *.txt *.lem
 	rm -f $(GS)
 	rm -f *.ml *.mli *.cmo *.cmi *.cmx *.native *.a *.o *.cma *.cmxa .depend
 	rm -rf ocamldoc

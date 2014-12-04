@@ -27,7 +27,7 @@ module T1 = struct
   let _Ident = parse_RE "[A-Z][A-Za-z0-9_]*"
   
   let keywords = ["let";"in";"if";"then";"else";"rec";"match";"with"]
-  let ident = parse_RE "[a-z_][A-Za-z0-9_]*"
+  let ident = parse_RE "[a-z][A-Za-z0-9_]*"
   let ident x = 
     x |> ident 
     |> List.filter (fun (x,_) -> not (List.mem (c x) keywords))
@@ -277,7 +277,7 @@ ATEXPR ->
   | RECORD                    {{ x1 }}
   | s1=ATEXPR "." s2=FIELDNAME      {{  s1^"."^s2 (* FIXME rec select *)  }}
   | s1=ATEXPR "." "[" s2=EXPR "]"   {{  s1^".["^s2^"]"  }}
-  | "_"                       {{ "\\_" }} (* FIXME this just because PATTERNs are EXPRs *)
+  | "_"                       {{ "\\_" }} (* FIXME this just because PATTERNs are EXPRs; FIXME remove if allowed in ident *)
   | "<fun>"                   {{ "<\\textit{fun}>" (* "{<{\\textit{fun}>}" *) }} (* for return values from ocaml toplevel *)
   | "(" w1=?w? s1=INFIXOP w2=?w? ")"  {{ "("^(Tex.w w1)^s1^(Tex.w w2)^")" }}
 
@@ -395,17 +395,24 @@ let main () =
       | None -> Error (command^": couldn't read file: "^fname))
   |>> (fun (txt,fname) -> 
       let rs =run_parser_string parse_S txt in
-      match rs with
+      let rs =
 #ifdef P4
-      | [(r)] -> OK(r)
+        rs
 #else
-      | [(r,_)] -> OK(r)
+        rs |> List.map fst
 #endif
+      in
+      match rs with
+      | [(r)] -> OK(r)
       | [] -> (Error (command^": failed to parse file: "^fname))
-      | _ -> (Error (command^": failed to parse file unambiguously: "^fname)))
+      | r1::r2::_ -> (Error (String.concat "\n" [
+          command^": failed to parse file unambiguously: "^fname;
+          r1;
+          r2
+        ])))
   |>> (fun r -> print_string r; OK ())
   |> (function
-      | Error s -> failwith s
+      | Error s -> print_string s; failwith s
       | OK () -> ())
 
 let _ = main ()
