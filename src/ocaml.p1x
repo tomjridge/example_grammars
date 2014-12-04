@@ -16,6 +16,16 @@ let reserved_Idents = ["List";"String";"Hashtbl"]
 
 let constr x = x |> _Ident |> List.filter (fun (x,_) -> not (List.mem (c x) reserved_Idents))
 
+(* FIXME this is now in P1 *)
+let ss_concat_2 (`SS(s,i,j)) (`SS(s,k,l)) = 
+  assert (j=k);
+  (`SS(s,i,l))
+
+let rec ss_concat xs = (match xs with
+    | [] -> failwith "ss_concat"
+    | [x] -> x
+    | x::xs -> ss_concat_2 x (ss_concat xs))
+
 let comment = ((a "(*") **> (until_a "*)") **> (a "*)")) >> (fun (x,(y,z)) -> ss_concat [x;y;z])
 let ws = (parse_RE "[ \n]*")
 let ws = ws ||| ((ws **> comment **> ws) >> (fun (x,(y,z)) -> ss_concat [x;y;z]))
@@ -64,6 +74,21 @@ module Map = struct
                                      
   let w s = to_whitespace(content s)
 
+  let _CONSTRNAME s = "\\textsf{" ^(texify_underscore s) ^"}"
+ 
+  let _TYPECONSTRNAME s = ("\\textsf{"^(texify_underscore s)^"}")
+
+  let tyvar s = 
+    if s = "'a" then "\\alpha" else 
+    if s = "'b" then "\\beta" else 
+    if s = "'c" then "\\gamma" else 
+    if s = "'d" then "\\delta" else 
+    if s = "'e" then "\\epsilon" else 
+    if s = "'f" then "\\zeta" else 
+    "\\textit{"
+    ^(texify_underscore s)
+    ^"}"
+
 end (* Map *)
 
 <<g<<
@@ -105,6 +130,44 @@ MODULEPATH -> ?_Ident?      {{ Map.module_path (c x1) }}
 
 
 
+(* 6.4 Type expressions; following for type defns FIXME needs tidying up  *)
+
+TYPEXPR -> "'" ?ident?            {{ Map.tyvar ([x1;x2]|>ss_concat|>c) }}                                                                    
+  | "(" w1=?w? t=TYPEXPR w2=?w? ")"       {{ "("^(Map.w w1)^t^(Map.w w2)^")" }}                                                  
+  | t1=TYPEXPR w1=?w? "->" w2=?w? t2=TYPEXPR  {{ t1^(Map.w w1)^"{\\rightarrow}"^(Map.w w2)^t2 }}                                               
+  | s1=TYPEXPR w1=?w? "*" w2=?w? s2=TYPEXPR   {{ s1^(Map.w w1)^"{\\times}"^(Map.w w2)^s2 }} (* FIXME ambiguity *)                          
+  | TYPECONSTR                    {{ x1 }}                                                                                                  
+  | s2=TYPECONSTR w1=?w? s1=TYPEXPRA       {{ Map._type (s2^(Map.w w1)^s1) }}
+
+TYPEXPRA -> TYPEXPR {{ x1 }}
+  | TYPEXPR ?w? TYPEXPRA          {{ x1^(Map.w x2)^x3 }}
+
+OCAMLTYPEXPR -> "'" ?ident?            {{ Map.tyvar ([x1;x2]|>ss_concat|>c) }}                                                                    
+  | "(" w1=?w? t=TYPEXPR w2=?w? ")"       {{ "("^(Map.w w1)^t^(Map.w w2)^")" }}                                                  
+  | t1=TYPEXPR w1=?w? "->" w2=?w? t2=TYPEXPR  {{ t1^(Map.w w1)^"{\\rightarrow}"^(Map.w w2)^t2 }}                                               
+  | s1=TYPEXPR w1=?w? "*" w2=?w? s2=TYPEXPR   {{ s1^(Map.w w1)^"{\\times}"^(Map.w w2)^s2 }} (* FIXME ambiguity *)                          
+  | TYPECONSTR                    {{ x1 }}                                                                                                  
+  | s1=TYPEXPR w1=?w? s2=TYPECONSTR        {{ Map._type (s1^(Map.w w1)^s2) (* FIXME try and map types at a higher level as well *)  }}
+  | "(" w1=?w? s1=TYPEXPRA w2=?w? ")" w3=?w? s2=TYPECONSTR {{ "("^(Map.w w1)^s1^(Map.w w2)^")"^(Map.w w3)^s2 }}
+
+OCAMLTYPEXPRA -> TYPEXPR {{ x1 }}
+  | TYPEXPR ?w? "," ?w? TYPEXPRA {{ x1^(Map.w x2)^","^(Map.w x4)^x5 }}
+                                  
+(*                                
+  | "(" ?w? TYPE ?w? ")"          {{ fun (b1,(w1,(s1,(w2,b2)))) -> ccat [b1;w1;s1;w2;b2] }}                                                
+  | TYPE ?w? ?ident?              {{ fun (t,(_,i)) -> t^" "^(map_type (content i)) }}                                                       
+  | MODULEPATH "." TYPEXPR        {{ fun (s1,(_,s2)) -> map_type (s1^"."^s2) }}                                                             
+  | TYPEXPR ?w? TYPECONSTR        {{ fun (s1,(w1,s2)) -> s1^(w w1)^s2 }}                                                                    
+*)                                
+                                  
+TYPECONSTR -> TYPECONSTRNAME      {{ x1  }}                                                                                                 
+  | MODULEPATH "." TYPECONSTRNAME {{ Map._type(x1^"."^x3) }}                                                              
+                                  
+POLYTYPEXPR -> TYPEXPR            {{ (* FIXME *) x1 }}                                                                                      
+
+
+
+
 (* 6.5 Constants *)
 
 CONSTANT -> CONSTR      {{ x1 }}                                          
@@ -116,7 +179,6 @@ CONSTANT -> CONSTR      {{ x1 }}
   | "()"                {{ c x1 }}                                           
 
 
-TYPEXPR -> TYPEXPR {{ x1 }} (* FIXME placeholder *)
 
 (* 6.6 Patterns *)
 
@@ -192,6 +254,57 @@ FIELDS ->
                                                 
 FIELD ->                                        
     f=?ident? w1=?w? "=" w2=?w? e=EXPR           {{ (Map.valuename (c f))^(Map.w w1)^"="^(Map.w w2)^e }}                                                                     
+
+
+(* 6.8 Type and exception definitions *)
+
+TYPEDEFINITION -> "type" w1=?w? s2=TYPEDEF      {{ "\\textsf{type}"^(Map.w w1)^s2 }}                      
+
+TYPEDEF -> TYPECONSTRNAME ?w? TYPEINFORMATION 
+      {{ x1^(Map.w x2)^x3 }}                                  
+  | TYPECONSTRNAME ?w? TYPEPARAMS ?w? TYPEINFORMATION 
+      {{ x1^(Map.w x2)^(x3)^(Map.w x4)^x5 }} 
+      (* FIXME what about params? may cause problems because hol lists params in order they occur in defn :( *)                                 
+   
+TYPEPARAMS -> TYPEPARAM {{ x1 }}
+  | TYPEPARAM ?w? TYPEPARAMS              {{ x1^(Map.w x2)^x3 }}
+
+OCAMLTYPEPARAMS -> TYPEPARAM {{ x1 }}
+  | "(" ?w? TYPEPARAMSA ?w? ")"           {{ "("^(c x2)^x3^(c x4)^")" }}
+
+TYPEPARAMSA -> TYPEPARAM                  {{ x1 }}
+  | TYPEPARAM ?w? "," ?w? TYPEPARAMSA     {{ x1^(Map.w x2)^(c x3)^(Map.w x4)^x5 }}
+
+TYPEPARAM -> "'" ?ident?                  {{ Map.tyvar([x1;x2]|>ss_concat|>c) }}
+                                       
+TYPECONSTRNAME -> ?ident?                 {{ Map._TYPECONSTRNAME (c x1) }}
+                                          
+TYPEINFORMATION -> TYPEEQUATION           {{ x1 }}                                                    
+  | TYPEREPRESENTATION                    {{ x1 }}                                                    
+
+TYPEEQUATION -> "=" ?w? TYPEXPR           {{ "="^(Map.w x2)^x3 }}
+
+TYPEREPRESENTATION -> "=" ?w? CONSTRDECLS {{ "="^(Map.w x2)^x3 }}                                                    
+  | "=" w3=?w? "<|" w1=?w? s2=FIELDDECLS w2=?w? "|>"  {{ "="^(Map.w w3)^"\\langle{}"^(Map.w w1)^s2^(Map.w w2)^"\\rangle{}" }}
+                                          
+CONSTRDECLS -> CONSTRDECL                 {{ x1 }}                                                    
+  | s1=CONSTRDECL w1=?w? "|" w2=?w? s2=CONSTRDECLS    {{ s1^(Map.w w1)^"|"^(Map.w w2)^s2 }}                      
+                                          
+CONSTRDECL -> CONSTRNAME                  {{ x1 }}                                                    
+  | s1=CONSTRNAME w1=?w? "of" w2=?w? s2=TYPEXPR       {{ s1^(Map.w w1)^"\\textsf{of}"^(Map.w w2)^s2 }} 
+                                          
+CONSTRNAME -> ?_Ident?                     {{ "\\textsf{"^(Map._CONSTRNAME (c x1))^"}" }}                                                     
+
+(* following can end in optional ; *)
+FIELDDECLS -> FIELDDECLSA                 {{ x1 }}
+  | s1=FIELDDECLSA w1=?w? s2=";"          {{ (s1^(Map.w w1)^" "^(c s2)) }}
+
+FIELDDECLSA -> FIELDDECL                   {{ x1 }}
+  | s1=FIELDDECL w1=?w? ";" w2=?w? s2=FIELDDECLSA      {{ s1^(Map.w w1)^";"^(Map.w w2)^s2 }} 
+
+(* FIXME the pattern is we map nonterms to strings; this causes lots of messing about with c and ^ *)
+
+FIELDDECL -> s1=FIELDNAME w1=?w? ":" w2=?w? s2=POLYTYPEXPR {{ s1^(Map.w w1)^":"^(Map.w w2)^s2 }}
 
 
 

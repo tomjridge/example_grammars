@@ -194,11 +194,16 @@ let main () =
         OK args)
   |>> (fun args ->
       match read_file_as_string args.file with 
-      | Some x -> OK (x,args.tag) 
+      | Some x -> OK (x,args) 
       | None -> Error (command^": couldn't read file: "^args.file))
-  |>> (fun (txt,tag) -> 
-      let eg = run_parser_string parse_S txt in
-      let _ = eg |> List.map fst |> List.map (embedg_to_string tag) |> List.map print_string in
+  |>> (fun (txt,args) -> 
+      let rs = run_parser_string parse_S txt in
+      match rs with
+      | [(r,_)] -> OK(r,args)
+      | [] -> (Error (command^": failed to parse grammar file: "^args.file))
+      | _ -> (Error (command^": failed to parse grammar file unambiguously: "^args.file)))
+  |>> (fun (r,args) -> 
+      let _ = r |> (embedg_to_string args.tag) |> print_string in
       OK ())
   |> (function
       | Error s -> failwith s

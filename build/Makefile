@@ -15,8 +15,8 @@ COMPFLAGS:=$(WARNINGS)
 
 all: $(P1_GEN) before_all 
 	make grammar.native
-	make x_to_g
-	make g_to_ml
+	make p1x_to_p1
+	make p1_to_ml
 	make cmo
 	make $(MLS_TO_EXEC:.ml=.native)
 
@@ -26,10 +26,10 @@ $(P1_GEN):
 	cd ../src_ext/p1/build && make
 
 P1X:=$(wildcard *.p1x)
-x_to_g: $(P1X:.p1x=.p1)
+p1x_to_p1: $(P1X:.p1x=.p1)
 
 P1S:=$(wildcard *.p1)
-g_to_ml: $(P1S:.p1=.ml) 
+p1_to_ml: $(P1S:.p1=.ml) 
 
 include Makefile.include
 
