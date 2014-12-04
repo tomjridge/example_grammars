@@ -101,7 +101,12 @@ let sym_to_string x = (match x with
 
 type 'a symspair = [ `SYMSPAIR of vsym list * 'a]
 
-let fun_binding_for_act : 'a symspair -> string = (fun (`SYMSPAIR (xs,_)) ->
+
+(* command line options *)
+type assoc = Left | Right
+type args = { file: string; tag:string; assoc:assoc }
+
+let fun_binding_for_act : args -> 'a symspair -> string = (fun args (`SYMSPAIR (xs,_)) ->
     (* number the xs *)
     let xs = (List.fold_left (fun (n,acc) x -> (n+1,acc@[(n,x)])) (1,[]) xs) |> snd in
     let xs =
@@ -113,11 +118,18 @@ let fun_binding_for_act : 'a symspair -> string = (fun (`SYMSPAIR (xs,_)) ->
     in
     let vsym_to_var (`VSYM(Some x,sym)) = x in
     (* left assoc List.fold_left (fun acc x -> String.concat "" ["(";acc;",";(x |> vsym_to_var);")"]) (List.hd xs |> vsym_to_var) (List.tl xs) *)
+    (* right assoc *)
     let rec f1 xs = (match xs with
         | [vsym] -> (vsym |> vsym_to_var)
         | x::xs -> (String.concat "" ["(";(x |> vsym_to_var);",";f1 xs;")"]))
     in
-    f1 xs)
+    (* left assoc for P4 *)
+    let dest xs = let xs = List.rev xs in (xs |> List.tl |> List.rev, List.hd xs) in
+    let rec f2 xs = (match xs with
+        | [vsym] -> (vsym |> vsym_to_var)
+        | _ -> let (xs,x) =  dest xs in (String.concat "" ["(";f2 xs;",";(x |> vsym_to_var);")"]))
+    in
+    match args.assoc with | Left -> f2 xs | Right -> f1 xs)
 
 (*
 let _ = fun_binding_for_act (`SYMSACT ([`VSYM(None,`NT "E");`VSYM(Some "v",`NT "E");`VSYM(None,`NT "E")],`ACT "act"))
@@ -128,17 +140,15 @@ let vsym_to_string (`VSYM (so,sym)) = String.concat "" [
     so |> (fun x -> match x with | None -> "" | Some x -> x^"=");
     sym |> sym_to_string]
 
-let symsact_to_string : symsact -> string = fun (`SYMSACT (xs,`ACT (tag,act))) -> 
+let symsact_to_string : args -> symsact -> string = fun args (`SYMSACT (xs,`ACT (tag,act))) -> 
   (* remove var bindings because we are transforming into a grammar without extensions *)
   let ys = List.map (fun (`VSYM (so,sym)) -> `VSYM(None,sym)) xs in
   String.concat "" [
     (ys |> List.map vsym_to_string |> String.concat " ");
-    " {{ fun ";(`SYMSPAIR(xs,()) |> fun_binding_for_act); " -> "; act;"}}"]
+    " {{ fun ";(`SYMSPAIR(xs,()) |> (fun_binding_for_act args)); " -> "; act;"}}"]
 
-(* tag for actions *)
-type tag = string
-
-let symsacts_to_string : tag -> symsacts -> string = fun tag x -> match x with | (`SYMSACTS (xs,acts)) -> 
+let symsacts_to_string : args -> symsacts -> string = fun args x -> match x with | (`SYMSACTS (xs,acts)) -> 
+  let tag=args.tag in
   let Some(act) = 
     try 
       Some(List.find (fun (`ACT(tag',_)) -> tag'=tag) acts) 
@@ -146,30 +156,31 @@ let symsacts_to_string : tag -> symsacts -> string = fun tag x -> match x with |
         Some(List.find (fun (`ACT(tag',_)) -> tag'="") acts)  (* default to usign the tag "" *)
       with _ -> None
   in
-  (`SYMSACT(xs,act) |> symsact_to_string)
+  (`SYMSACT(xs,act) |> (symsact_to_string args))
   
       
-let rule_to_string : tag -> rule -> string = fun tag (`RULE (nt,xs)) -> String.concat "" [
-    nt; " -> "; xs |> List.map (symsacts_to_string tag) |> String.concat "\n | "]
+let rule_to_string : args -> rule -> string = fun args (`RULE (nt,xs)) -> String.concat "" [
+    nt; " -> "; xs |> List.map (symsacts_to_string args) |> String.concat "\n | "]
 
-let g_to_string : tag -> g -> string = fun tag (`RULES xs) -> (xs |> List.map (rule_to_string tag) |> String.concat "\n")
+let g_to_string : args -> g -> string = fun args (`RULES xs) -> (xs |> List.map (rule_to_string args) |> String.concat "\n")
 
-let embedg_to_string tag (`EMBEDG(h,g,f)) = String.concat "\n" [
+let embedg_to_string args (`EMBEDG(h,g,f)) = String.concat "\n" [
     h ^"<<"^"g<<";
-    (g |> (g_to_string tag));
+    (g |> (g_to_string args));
     ">>"^"g>>"^f]
 
 
 open P1_extra_combinators
 open P1_cl
 
-type ty_cl_args = { file: string; tag:string }
-let cl0 = { file=""; tag=""  }
+let cl0 = { file=""; tag=""; assoc=Right (* for P1 *)  }
 
 (* precedence to earlier args *)
 let rec parse_CL = fun i -> (
   let f1 cl (f,xs) = (match (f,xs) with
     | ("-tag",[x]) -> {cl with tag=x }
+    | ("-assoc",["left"]) -> {cl with assoc=Left }
+    | ("-assoc",["right"]) -> {cl with assoc=Right }
     | _ -> (failwith ("parse_CL: unrecognized flag/arg combination: "^f^" "^(String.concat " " xs))))
   in
   let sep = a "\x00" in
@@ -203,7 +214,7 @@ let main () =
       | [] -> (Error (command^": failed to parse grammar file: "^args.file))
       | _ -> (Error (command^": failed to parse grammar file unambiguously: "^args.file)))
   |>> (fun (r,args) -> 
-      let _ = r |> (embedg_to_string args.tag) |> print_string in
+      let _ = r |> (embedg_to_string args) |> print_string in
       OK ())
   |> (function
       | Error s -> failwith s
