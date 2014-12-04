@@ -17,7 +17,7 @@ COMPFLAGS:=$(WARNINGS)
 # turn off line numbering, which doesn't work so well with code generation 
 CPPO:=cppo -n
 
-all: $(P1_GEN) before_all 
+all: $(P1_GEN) ../src_ext/p1/build/p1.cma ../src_ext/e3/build/e3.cma ../src_ext/p4/build/p4.cma before_all 
 	make grammar.native
 	make cppo_to
 	make p1x_to_p1
@@ -26,6 +26,11 @@ all: $(P1_GEN) before_all
 	make ocaml_p4.ml
 	make cmo
 	make $(MLS_TO_EXEC:.ml=.native)
+
+../src_ext/p1/build/p1.cma ../src_ext/e3/build/e3.cma ../src_ext/p4/build/p4.cma:
+	cd ../src_ext/p1/build && make
+	cd ../src_ext/e3/build && make
+	cd ../src_ext/p4/build && make
 
 test:
 	./ocaml.native os_command.lem
