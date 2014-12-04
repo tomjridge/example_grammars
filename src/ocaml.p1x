@@ -1,8 +1,9 @@
 open P1_lib
 
 let c = content
+let eof = parse_EOF
 
-let ident = parse_RE "[a-z][A-Za-z0-9]*"
+let ident = parse_RE "[a-z_][A-Za-z0-9_]*"
 
 let keywords = ["let";"in";"if";"then";"else";"rec";"match";"with"]
 
@@ -10,7 +11,7 @@ let ident x =
   x |> ident 
   |> List.filter (fun (x,_) -> not (List.mem (c x) keywords))
 
-let _Ident = parse_RE "[A-Z][A-Za-z0-9]*"
+let _Ident = parse_RE "[A-Z][A-Za-z0-9_]*"
 
 let reserved_Idents = ["List";"String";"Hashtbl"]
 
@@ -35,7 +36,8 @@ let num = parse_RE "[0-9]+"
 let notdquote = until_a "\""
 let notsquote = until_a "'"
 
-module Map = struct
+(* mappings for producing latex *)
+module Tex = struct
   let texify_underscore s = (Str.global_replace (Str.regexp "[_]") "\\_" s) 
 
   let valuename s = (
@@ -89,15 +91,29 @@ module Map = struct
     ^(texify_underscore s)
     ^"}"
 
-end (* Map *)
+end (* Tex *)
 
 <<g<<
 
-S -> VALUENAME {{ x1 }}
+(* the expressions we want to parse at top-level *)
+S -> ?w? DEFN ?w? ?eof? {{ x2 }}
+| ?w? TYPEDEFINITIONS ?w? ?eof? {{ x2 }}
+| ?w? TYPEXPR ?w? ?eof? {{ x2 }}
+| ?w? "e:" EXPR ?w? ?eof? {{ x3 }}
+| w1=?w? "val" w2=?w? i=EXPR w3=?w? ":" w4=?w? ty=TYPEXPR ?w? ?eof? {{ (Tex.w w1)^"\\textsf{val}"^(Tex.w w2)^i^(Tex.w w3)^":"^(Tex.w w4)^ty }}
+
+
+DEFN ->                               
+    "let" w1=?w? e1=LETBINDING                  {{ "\\textsf{let}"^(Tex.w w1)^e1 }}                      
+  | "let" w0=?w? "rec" w1=?w? e1=LETBINDING     {{ "\\textsf{let}"^(Tex.w w0)^"\\textsf{rec}"^(Tex.w w1)^e1 }}
+                                      
+TYPEDEFINITIONS -> TYPEDEFINITION      {{ x1 }}                                                                
+  | TYPEDEFINITION ?w? TYPEDEFINITIONS {{ x1^(Tex.w x2)^x3 }}                                  
+
 
 (* 6.3 Names *)                       
 
-VALUENAME -> ?ident?                   {{ Map.valuename(c x1) }}                                       
+VALUENAME -> ?ident?                   {{ Tex.valuename(c x1) }}                                       
                                       
 INFIXOP -> "="                         {{ c x1 }}                                              
   | "++"                               {{ c x1 }}                                                
@@ -115,7 +131,7 @@ INFIXOP -> "="                         {{ c x1 }}
   | ">>="                              {{ "{{\\gg}\\!\\!=}" }}                                    
   | "|||"                              {{ c x1 }}                                                     
 
-FIELDNAME -> ?ident?                   {{ Map.valuename(c x1) }}                                                      
+FIELDNAME -> ?ident?                   {{ Tex.valuename(c x1) }}                                                      
                                      
 
 VALUEPATH -> VALUENAME       {{ x1 }}                          
@@ -123,35 +139,35 @@ VALUEPATH -> VALUENAME       {{ x1 }}
 
 (* this was ?Ident? but we don't want List.map interpreted as CONSTR.FIELDNAME *)
 CONSTR ->                 
-    ?constr?               {{ Map.constr (c x1) }}                           
+    ?constr?               {{ Tex.constr (c x1) }}                           
                           
-MODULEPATH -> ?_Ident?      {{ Map.module_path (c x1) }}                      
-  | MODULEPATH "." ?_Ident? {{ x1^"."^(Map.module_path (c x3)) }}
+MODULEPATH -> ?_Ident?      {{ Tex.module_path (c x1) }}                      
+  | MODULEPATH "." ?_Ident? {{ x1^"."^(Tex.module_path (c x3)) }}
 
 
 
 (* 6.4 Type expressions; following for type defns FIXME needs tidying up  *)
 
-TYPEXPR -> "'" ?ident?            {{ Map.tyvar ([x1;x2]|>ss_concat|>c) }}                                                                    
-  | "(" w1=?w? t=TYPEXPR w2=?w? ")"       {{ "("^(Map.w w1)^t^(Map.w w2)^")" }}                                                  
-  | t1=TYPEXPR w1=?w? "->" w2=?w? t2=TYPEXPR  {{ t1^(Map.w w1)^"{\\rightarrow}"^(Map.w w2)^t2 }}                                               
-  | s1=TYPEXPR w1=?w? "*" w2=?w? s2=TYPEXPR   {{ s1^(Map.w w1)^"{\\times}"^(Map.w w2)^s2 }} (* FIXME ambiguity *)                          
+TYPEXPR -> "'" ?ident?            {{ Tex.tyvar ([x1;x2]|>ss_concat|>c) }}                                                                    
+  | "(" w1=?w? t=TYPEXPR w2=?w? ")"       {{ "("^(Tex.w w1)^t^(Tex.w w2)^")" }}                                                  
+  | t1=TYPEXPR w1=?w? "->" w2=?w? t2=TYPEXPR  {{ t1^(Tex.w w1)^"{\\rightarrow}"^(Tex.w w2)^t2 }}                                               
+  | s1=TYPEXPR w1=?w? "*" w2=?w? s2=TYPEXPR   {{ s1^(Tex.w w1)^"{\\times}"^(Tex.w w2)^s2 }} (* FIXME ambiguity *)                          
   | TYPECONSTR                    {{ x1 }}                                                                                                  
-  | s2=TYPECONSTR w1=?w? s1=TYPEXPRA       {{ Map._type (s2^(Map.w w1)^s1) }}
+  | s2=TYPECONSTR w1=?w? s1=TYPEXPRA       {{ Tex._type (s2^(Tex.w w1)^s1) }}
 
 TYPEXPRA -> TYPEXPR {{ x1 }}
-  | TYPEXPR ?w? TYPEXPRA          {{ x1^(Map.w x2)^x3 }}
+  | TYPEXPR ?w? TYPEXPRA          {{ x1^(Tex.w x2)^x3 }}
 
-OCAMLTYPEXPR -> "'" ?ident?            {{ Map.tyvar ([x1;x2]|>ss_concat|>c) }}                                                                    
-  | "(" w1=?w? t=TYPEXPR w2=?w? ")"       {{ "("^(Map.w w1)^t^(Map.w w2)^")" }}                                                  
-  | t1=TYPEXPR w1=?w? "->" w2=?w? t2=TYPEXPR  {{ t1^(Map.w w1)^"{\\rightarrow}"^(Map.w w2)^t2 }}                                               
-  | s1=TYPEXPR w1=?w? "*" w2=?w? s2=TYPEXPR   {{ s1^(Map.w w1)^"{\\times}"^(Map.w w2)^s2 }} (* FIXME ambiguity *)                          
+OCAMLTYPEXPR -> "'" ?ident?            {{ Tex.tyvar ([x1;x2]|>ss_concat|>c) }}                                                                    
+  | "(" w1=?w? t=TYPEXPR w2=?w? ")"       {{ "("^(Tex.w w1)^t^(Tex.w w2)^")" }}                                                  
+  | t1=TYPEXPR w1=?w? "->" w2=?w? t2=TYPEXPR  {{ t1^(Tex.w w1)^"{\\rightarrow}"^(Tex.w w2)^t2 }}                                               
+  | s1=TYPEXPR w1=?w? "*" w2=?w? s2=TYPEXPR   {{ s1^(Tex.w w1)^"{\\times}"^(Tex.w w2)^s2 }} (* FIXME ambiguity *)                          
   | TYPECONSTR                    {{ x1 }}                                                                                                  
-  | s1=TYPEXPR w1=?w? s2=TYPECONSTR        {{ Map._type (s1^(Map.w w1)^s2) (* FIXME try and map types at a higher level as well *)  }}
-  | "(" w1=?w? s1=TYPEXPRA w2=?w? ")" w3=?w? s2=TYPECONSTR {{ "("^(Map.w w1)^s1^(Map.w w2)^")"^(Map.w w3)^s2 }}
+  | s1=TYPEXPR w1=?w? s2=TYPECONSTR        {{ Tex._type (s1^(Tex.w w1)^s2) (* FIXME try and map types at a higher level as well *)  }}
+  | "(" w1=?w? s1=TYPEXPRA w2=?w? ")" w3=?w? s2=TYPECONSTR {{ "("^(Tex.w w1)^s1^(Tex.w w2)^")"^(Tex.w w3)^s2 }}
 
 OCAMLTYPEXPRA -> TYPEXPR {{ x1 }}
-  | TYPEXPR ?w? "," ?w? TYPEXPRA {{ x1^(Map.w x2)^","^(Map.w x4)^x5 }}
+  | TYPEXPR ?w? "," ?w? TYPEXPRA {{ x1^(Tex.w x2)^","^(Tex.w x4)^x5 }}
                                   
 (*                                
   | "(" ?w? TYPE ?w? ")"          {{ fun (b1,(w1,(s1,(w2,b2)))) -> ccat [b1;w1;s1;w2;b2] }}                                                
@@ -161,7 +177,7 @@ OCAMLTYPEXPRA -> TYPEXPR {{ x1 }}
 *)                                
                                   
 TYPECONSTR -> TYPECONSTRNAME      {{ x1  }}                                                                                                 
-  | MODULEPATH "." TYPECONSTRNAME {{ Map._type(x1^"."^x3) }}                                                              
+  | MODULEPATH "." TYPECONSTRNAME {{ Tex._type(x1^"."^x3) }}                                                              
                                   
 POLYTYPEXPR -> TYPEXPR            {{ (* FIXME *) x1 }}                                                                                      
 
@@ -171,7 +187,7 @@ POLYTYPEXPR -> TYPEXPR            {{ (* FIXME *) x1 }}
 (* 6.5 Constants *)
 
 CONSTANT -> CONSTR      {{ x1 }}                                          
-  | "[" ?w? "]"         {{ "["^(Map.w x2)^"]" }}            
+  | "[" ?w? "]"         {{ "["^(Tex.w x2)^"]" }}            
   | ?num?               {{ c x1 }}                                           
   | "-" ?num?           {{ (c x1)^(c x2) }}                
   | '"' s=?notdquote? '"' {{ ("{\\texttt{\"" ^ (c s) ^ "\"} }") }}
@@ -188,133 +204,151 @@ PATTERN -> EXPR {{ x1 }}
                                                        
 EXPR -> ATEXPR                                            {{ x1 }}                                                                                                                         
   | e=EXPR ":" t=TYPEXPR                                  {{ e^":"^t }}                                                                                                   
-  | EXPR ?w? "," ?w? EXPRA                                {{ x1^(Map.w x2)^(c x3)^(Map.w x4)^x5 }}                                                                                                                     
-  | CONSTR ?w? EXPR                                       {{ x1^(Map.w x2)^x3 }}                                                                                           
-  | EXPR ?w? "::" ?w? EXPR                                {{ x1^(Map.w x2)^(c x3)^(Map.w x4)^x5 }}                                                                                                                    
+  | EXPR ?w? "," ?w? EXPRA                                {{ x1^(Tex.w x2)^(c x3)^(Tex.w x4)^x5 }}                                                                                                                     
+  | CONSTR ?w? EXPR                                       {{ x1^(Tex.w x2)^x3 }}                                                                                           
+  | EXPR ?w? "::" ?w? EXPR                                {{ x1^(Tex.w x2)^(c x3)^(Tex.w x4)^x5 }}                                                                                                                    
   | FNARGS                                                {{ x1  }}                                                                                                              
-  | EXPR ?w? INFIXOP ?w? EXPR                             {{ x1^(Map.w x2)^(x3)^(Map.w x4)^x5 }}                                                                         
+  | EXPR ?w? INFIXOP ?w? EXPR                             {{ x1^(Tex.w x2)^(x3)^(Tex.w x4)^x5 }}                                                                         
   | "if" w1=?w? e1=EXPR w2=?w? "then" w3=?w? e2=EXPR w4=?w? "else" w5=?w? e3=EXPR 
-    {{ ("\\textsf{if}"^(Map.w w1)^e1^(Map.w w2)^"\\textsf{then}"^(Map.w w3)^e2^(Map.w w4)^"\\textsf{else}"^(Map.w w5)^e3) }}
+    {{ ("\\textsf{if}"^(Tex.w w1)^e1^(Tex.w w2)^"\\textsf{then}"^(Tex.w w3)^e2^(Tex.w w4)^"\\textsf{else}"^(Tex.w w5)^e3) }}
   | "match" w1=?w? e=EXPR w2=?w? "with" w3=?w? cs=PATTERNMATCHING w4=?w? "end"   
-    {{ ("\\textsf{match}"^(Map.w w1)^e^(Map.w w2)^"\\textsf{with}"^(Map.w w3)^((*String.concat "||"*) cs)^(Map.w w4)^("\\textsf{end}")) }}            
+    {{ ("\\textsf{match}"^(Tex.w w1)^e^(Tex.w w2)^"\\textsf{with}"^(Tex.w w3)^((*String.concat "||"*) cs)^(Tex.w w4)^("\\textsf{end}")) }}            
   | "let" w1=?w? e1=LETBINDING w2=?w? "in" w3=?w? e2=EXPR 
-    {{ "\\textsf{let}"^(Map.w w1)^e1^(Map.w w2)^"\\textsf{in}"^(Map.w w3)^e2 }}                                                
+    {{ "\\textsf{let}"^(Tex.w w1)^e1^(Tex.w w2)^"\\textsf{in}"^(Tex.w w3)^e2 }}                                                
   | "let" w0=?w? "rec" w1=?w? e1=LETBINDING w2=?w? "in" w3=?w? e2=EXPR
-    {{ "\\textsf{let}"^(Map.w w0)^"rec"^(Map.w w1)^e1^(Map.w w2)^"\\textsf{in}"^(Map.w w3)^e2 }}                                                
+    {{ "\\textsf{let}"^(Tex.w w0)^"rec"^(Tex.w w1)^e1^(Tex.w w2)^"\\textsf{in}"^(Tex.w w3)^e2 }}                                                
   | "fun" w1=?w? e1=MULTIPLEMATCHING                            
-    {{ "\\textsf{fun}"^(Map.w w1)^e1 }}                                                                                         
+    {{ "\\textsf{fun}"^(Tex.w w1)^e1 }}                                                                                         
 (* FIXME List.map parses as ATEXPR "." FIELDNAME, where ATEXPR is CONSTANT CONSTR *)
 
 ATEXPR ->                    
     VALUEPATH                 {{ x1 }}                                                             
   | CONSTANT                  {{ x1 }}                                                             
-  | "(" w1=?w? e1=EXPR w2=?w? ")" {{ "("^(Map.w w1)^e1^(Map.w w2)^")" }}           
-  | "[" w1=?w? ss=EXPRLIST w2=?w? "]"  {{  "["^(Map.w w1)^ss^(Map.w w2)^"]" }}           
+  | "(" w1=?w? e1=EXPR w2=?w? ")" {{ "("^(Tex.w w1)^e1^(Tex.w w2)^")" }}           
+  | "[" w1=?w? ss=EXPRLIST w2=?w? "]"  {{  "["^(Tex.w w1)^ss^(Tex.w w2)^"]" }}           
   | RECORD                    {{ x1 }}                                                     
   | s1=ATEXPR "." s2=FIELDNAME      {{  s1^"."^s2 (* FIXME rec select *)  }}           
   | s1=ATEXPR "." "[" s2=EXPR "]"   {{  s1^".["^s2^"]"  }}                     
   | "_"                       {{ "\\_" }} (* FIXME this just because PATTERNs are EXPRs *)
   | "<fun>"                   {{ "<\\textit{fun}>" (* "{<{\\textit{fun}>}" *) }} (* for return values from ocaml toplevel *)
-  | "(" w1=?w? s1=INFIXOP w2=?w? ")"  {{ "("^(Map.w w1)^s1^(Map.w w2)^")" }}
+  | "(" w1=?w? s1=INFIXOP w2=?w? ")"  {{ "("^(Tex.w w1)^s1^(Tex.w w2)^")" }}
                              
 EXPRA -> EXPR                 {{ x1 }}                                                             
-  | EXPR ?w? "," ?w? EXPRA    {{ x1^(Map.w x2)^(c x3)^(Map.w x4)^x5 }}                                                         
+  | EXPR ?w? "," ?w? EXPRA    {{ x1^(Tex.w x2)^(c x3)^(Tex.w x4)^x5 }}                                                         
 
 EXPRLIST ->                  
     EXPR                      {{ x1 }}                                                             
-  | EXPR ?w? ";" ?w? EXPRLIST {{ x1^(Map.w x2)^(c x3)^(Map.w x4)^x5 }}                                                         
+  | EXPR ?w? ";" ?w? EXPRLIST {{ x1^(Tex.w x2)^(c x3)^(Tex.w x4)^x5 }}                                                         
                              
 
 PATTERNMATCHING -> CASESB     {{ x1 }}                                                      
-  | "|" w1=?w? x=CASESB       {{ "|"^(Map.w w1)^x (* initial | *) }}                 
+  | "|" w1=?w? x=CASESB       {{ "|"^(Tex.w w1)^x (* initial | *) }}                 
                              
 CASESB ->                    
   CASE                        {{ x1 }}                                                     
-  | c1=CASE w1=?w? "|" w2=?w? cs=CASESB   {{ c1^(Map.w w1)^"|"^(Map.w w2)^cs }}           
+  | c1=CASE w1=?w? "|" w2=?w? cs=CASESB   {{ c1^(Tex.w w1)^"|"^(Tex.w w2)^cs }}           
 (* above clause erroneously allows cases to start with a bar *)
                                                                
-CASE -> e1=PATTERN w1=?w? "->" w2=?w? e2=EXPR                {{ e1^(Map.w w1)^"{\\rightarrow}"^(Map.w w2)^e2^"" }}                                                  
+CASE -> e1=PATTERN w1=?w? "->" w2=?w? e2=EXPR                {{ e1^(Tex.w w1)^"{\\rightarrow}"^(Tex.w w2)^e2^"" }}                                                  
                                                 
 MULTIPLEMATCHING -> PATTERNMATCHING              {{ x1 }} (* FIXME *)                                                                                                           
 
-LETBINDING -> PATTERN ?w? "=" ?w? EXPR           {{ x1^(Map.w x2)^(c x3)^(Map.w x4)^x5 }}                                                                                                                   
+LETBINDING -> PATTERN ?w? "=" ?w? EXPR           {{ x1^(Tex.w x2)^(c x3)^(Tex.w x4)^x5 }}                                                                                                                   
 
 
                                                 
-FNARGS -> ATEXPR ?w? ATEXPR                      {{ x1^(Map.w x2)^x3 }}                                                                                         
-  | ATEXPR ?w? FNARGS                            {{ x1^(Map.w x2)^x3 }}                                                                                         
+FNARGS -> ATEXPR ?w? ATEXPR                      {{ x1^(Tex.w x2)^x3 }}                                                                                         
+  | ATEXPR ?w? FNARGS                            {{ x1^(Tex.w x2)^x3 }}                                                                                         
                                                 
 RECORD ->                                       
-    "<|" w1=?w? fs=FIELDS w2=?w? "|>"                       {{ "\\langle{}"^(Map.w w1)^(fs)^(Map.w w2)^"\\rangle{}" }}                                                 
-  | "<|" w1=?w? i=ATEXPR w2=?w? "with" w3=?w? fs=FIELDS w4=?w? "|>" {{ "\\langle{}"^(Map.w w1)^i^(Map.w w2)^"\\textsf{with}"^(Map.w w3)^fs^(Map.w w4)^"\\rangle{}" }}
+    "<|" w1=?w? fs=FIELDS w2=?w? "|>"                       {{ "\\langle{}"^(Tex.w w1)^(fs)^(Tex.w w2)^"\\rangle{}" }}                                                 
+  | "<|" w1=?w? i=ATEXPR w2=?w? "with" w3=?w? fs=FIELDS w4=?w? "|>" {{ "\\langle{}"^(Tex.w w1)^i^(Tex.w w2)^"\\textsf{with}"^(Tex.w w3)^fs^(Tex.w w4)^"\\rangle{}" }}
                                                 
 FIELDS ->                                       
     FIELD                                        {{ x1 }}                                                                                                                       
-  | FIELD ?w? ";" ?w? FIELDS                     {{ x1^(Map.w x2)^(c x3)^(Map.w x4)^x5 }}                                                                                                                   
+  | FIELD ?w? ";" ?w? FIELDS                     {{ x1^(Tex.w x2)^(c x3)^(Tex.w x4)^x5 }}                                                                                                                   
                                                 
 FIELD ->                                        
-    f=?ident? w1=?w? "=" w2=?w? e=EXPR           {{ (Map.valuename (c f))^(Map.w w1)^"="^(Map.w w2)^e }}                                                                     
+    f=?ident? w1=?w? "=" w2=?w? e=EXPR           {{ (Tex.valuename (c f))^(Tex.w w1)^"="^(Tex.w w2)^e }}                                                                     
 
 
 (* 6.8 Type and exception definitions *)
 
-TYPEDEFINITION -> "type" w1=?w? s2=TYPEDEF      {{ "\\textsf{type}"^(Map.w w1)^s2 }}                      
+TYPEDEFINITION -> "type" w1=?w? s2=TYPEDEF      {{ "\\textsf{type}"^(Tex.w w1)^s2 }}                      
 
 TYPEDEF -> TYPECONSTRNAME ?w? TYPEINFORMATION 
-      {{ x1^(Map.w x2)^x3 }}                                  
+      {{ x1^(Tex.w x2)^x3 }}                                  
   | TYPECONSTRNAME ?w? TYPEPARAMS ?w? TYPEINFORMATION 
-      {{ x1^(Map.w x2)^(x3)^(Map.w x4)^x5 }} 
+      {{ x1^(Tex.w x2)^(x3)^(Tex.w x4)^x5 }} 
       (* FIXME what about params? may cause problems because hol lists params in order they occur in defn :( *)                                 
    
 TYPEPARAMS -> TYPEPARAM {{ x1 }}
-  | TYPEPARAM ?w? TYPEPARAMS              {{ x1^(Map.w x2)^x3 }}
+  | TYPEPARAM ?w? TYPEPARAMS              {{ x1^(Tex.w x2)^x3 }}
 
 OCAMLTYPEPARAMS -> TYPEPARAM {{ x1 }}
   | "(" ?w? TYPEPARAMSA ?w? ")"           {{ "("^(c x2)^x3^(c x4)^")" }}
 
 TYPEPARAMSA -> TYPEPARAM                  {{ x1 }}
-  | TYPEPARAM ?w? "," ?w? TYPEPARAMSA     {{ x1^(Map.w x2)^(c x3)^(Map.w x4)^x5 }}
+  | TYPEPARAM ?w? "," ?w? TYPEPARAMSA     {{ x1^(Tex.w x2)^(c x3)^(Tex.w x4)^x5 }}
 
-TYPEPARAM -> "'" ?ident?                  {{ Map.tyvar([x1;x2]|>ss_concat|>c) }}
+TYPEPARAM -> "'" ?ident?                  {{ Tex.tyvar([x1;x2]|>ss_concat|>c) }}
                                        
-TYPECONSTRNAME -> ?ident?                 {{ Map._TYPECONSTRNAME (c x1) }}
+TYPECONSTRNAME -> ?ident?                 {{ Tex._TYPECONSTRNAME (c x1) }}
                                           
 TYPEINFORMATION -> TYPEEQUATION           {{ x1 }}                                                    
   | TYPEREPRESENTATION                    {{ x1 }}                                                    
 
-TYPEEQUATION -> "=" ?w? TYPEXPR           {{ "="^(Map.w x2)^x3 }}
+TYPEEQUATION -> "=" ?w? TYPEXPR           {{ "="^(Tex.w x2)^x3 }}
 
-TYPEREPRESENTATION -> "=" ?w? CONSTRDECLS {{ "="^(Map.w x2)^x3 }}                                                    
-  | "=" w3=?w? "<|" w1=?w? s2=FIELDDECLS w2=?w? "|>"  {{ "="^(Map.w w3)^"\\langle{}"^(Map.w w1)^s2^(Map.w w2)^"\\rangle{}" }}
+TYPEREPRESENTATION -> "=" ?w? CONSTRDECLS {{ "="^(Tex.w x2)^x3 }}                                                    
+  | "=" w3=?w? "<|" w1=?w? s2=FIELDDECLS w2=?w? "|>"  {{ "="^(Tex.w w3)^"\\langle{}"^(Tex.w w1)^s2^(Tex.w w2)^"\\rangle{}" }}
                                           
 CONSTRDECLS -> CONSTRDECL                 {{ x1 }}                                                    
-  | s1=CONSTRDECL w1=?w? "|" w2=?w? s2=CONSTRDECLS    {{ s1^(Map.w w1)^"|"^(Map.w w2)^s2 }}                      
+  | s1=CONSTRDECL w1=?w? "|" w2=?w? s2=CONSTRDECLS    {{ s1^(Tex.w w1)^"|"^(Tex.w w2)^s2 }}                      
                                           
 CONSTRDECL -> CONSTRNAME                  {{ x1 }}                                                    
-  | s1=CONSTRNAME w1=?w? "of" w2=?w? s2=TYPEXPR       {{ s1^(Map.w w1)^"\\textsf{of}"^(Map.w w2)^s2 }} 
+  | s1=CONSTRNAME w1=?w? "of" w2=?w? s2=TYPEXPR       {{ s1^(Tex.w w1)^"\\textsf{of}"^(Tex.w w2)^s2 }} 
                                           
-CONSTRNAME -> ?_Ident?                     {{ "\\textsf{"^(Map._CONSTRNAME (c x1))^"}" }}                                                     
+CONSTRNAME -> ?_Ident?                     {{ "\\textsf{"^(Tex._CONSTRNAME (c x1))^"}" }}                                                     
 
 (* following can end in optional ; *)
 FIELDDECLS -> FIELDDECLSA                 {{ x1 }}
-  | s1=FIELDDECLSA w1=?w? s2=";"          {{ (s1^(Map.w w1)^" "^(c s2)) }}
+  | s1=FIELDDECLSA w1=?w? s2=";"          {{ (s1^(Tex.w w1)^" "^(c s2)) }}
 
 FIELDDECLSA -> FIELDDECL                   {{ x1 }}
-  | s1=FIELDDECL w1=?w? ";" w2=?w? s2=FIELDDECLSA      {{ s1^(Map.w w1)^";"^(Map.w w2)^s2 }} 
+  | s1=FIELDDECL w1=?w? ";" w2=?w? s2=FIELDDECLSA      {{ s1^(Tex.w w1)^";"^(Tex.w w2)^s2 }} 
 
 (* FIXME the pattern is we map nonterms to strings; this causes lots of messing about with c and ^ *)
 
-FIELDDECL -> s1=FIELDNAME w1=?w? ":" w2=?w? s2=POLYTYPEXPR {{ s1^(Map.w w1)^":"^(Map.w w2)^s2 }}
+FIELDDECL -> s1=FIELDNAME w1=?w? ":" w2=?w? s2=POLYTYPEXPR {{ s1^(Tex.w w1)^":"^(Tex.w w2)^s2 }}
 
 
 
 >>g>>
 
+type 'a or_error = OK of 'a | Error of string
+
+let ( |>> ) x f = (match x with
+    | OK x -> f x
+    | Error y -> Error y)
+
 let main () = 
-  let fname = Sys.argv.(1) in
-  let Some txt = read_file_as_string fname in
-  let eg = run_parser_string parse_S txt in
-  ()
+  let command = "ocaml" in
+  (try OK(Sys.argv.(1)) with _ -> Error (command^": require a file as argument"))
+  |>> (fun fname ->
+      match read_file_as_string fname with 
+      | Some x -> OK (x,fname) 
+      | None -> Error (command^": couldn't read file: "^fname))
+  |>> (fun (txt,fname) -> 
+      let rs =run_parser_string parse_S txt in
+      match rs with
+      | [(r,_)] -> OK(r)
+      | [] -> (Error (command^": failed to parse file: "^fname))
+      | _ -> (Error (command^": failed to parse file unambiguously: "^fname)))
+  |>> (fun r -> print_string r; OK ())
+  |> (function
+      | Error s -> failwith s
+      | OK () -> ())
 
 let _ = main ()
 

@@ -20,6 +20,9 @@ all: $(P1_GEN) before_all
 	make cmo
 	make $(MLS_TO_EXEC:.ml=.native)
 
+test:
+	./ocaml.native os_command.lem
+
 cmo: $(CMO)
 
 $(P1_GEN): 

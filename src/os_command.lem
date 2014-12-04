@@ -1,0 +1,24 @@
+type ty_os_command = 
+    OS_CLOSE of ty_fd
+  | OS_LINK of (cstring * cstring)
+  | OS_MKDIR of (cstring * file_perm)
+  | OS_OPEN of (cstring * int_open_flags * maybe file_perm)
+  | OS_OPEN_CLOSE of (cstring * int_open_flags * maybe file_perm) 
+  | OS_PREAD of (ty_fd * size_t * off_t) 
+  | OS_READ of (ty_fd * size_t) 
+  | OS_READDIR of cstring
+  | OS_READLINK of cstring
+  | OS_RENAME of (cstring * cstring)
+  | OS_RMDIR of cstring
+  | OS_STAT of cstring
+  | OS_SYMLINK of (cstring * cstring) 
+  | OS_TRUNCATE of (cstring * off_t)
+  | OS_UNLINK of cstring
+  | OS_PWRITE of (ty_fd * bytes * size_t * off_t)
+  | OS_WRITE of (ty_fd * bytes * size_t) 
+  | OS_ADD_USER_TO_GROUP of (uid * gid)
+  | OS_UMASK of file_perm
+  | OS_CHMOD of (cstring * file_perm)
+  | OS_CHOWN of (cstring * uid * gid)
+  | OS_CHDIR of cstring
+  | OS_LSEEK of (ty_fd * off_t * int_seek_command)

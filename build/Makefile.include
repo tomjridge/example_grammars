@@ -15,7 +15,7 @@ before_all:
 	make depend
 
 link: $(SRC_DIR)
-	find $(SRC_DIR) -maxdepth 1 \( -name "*.ml" -or -name "*.mli" -or -name "*.p1" -or -name "*.p1x" -or -name "*.txt" \) -exec ln -sf \{\} . \;
+	find $(SRC_DIR) -maxdepth 1 \( -name "*.ml" -or -name "*.mli" -or -name "*.p1" -or -name "*.p1x" -or -name "*.txt" -or -name "*.lem" \) -exec ln -sf \{\} . \;
 
 $(LIB).cma: $(MLS_FOR_LIB:.ml=.cmo)
 	$(CAMLC) $(COMPFLAGS) -a -o $@ $(CMO)
