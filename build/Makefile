@@ -55,7 +55,7 @@ all: ../src_ext/p1/build/p1.cma ../src_ext/e3/build/e3.cma ../src_ext/p4/build/p
 	make p1_to_ml
 	make ocaml_p4.ml
 	make cmo
-#	make $(MLS_TO_EXEC:.ml=.native)
+	make $(MLS_TO_EXEC:.ml=.native)
 
 test:
 	./ocaml.native os_command.lem
