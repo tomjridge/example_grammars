@@ -5,6 +5,8 @@ CAMLOPT:=ocamlfind ocamlopt
 CAMLDEP:=ocamlfind ocamldep -one-line
 OCAMLDOC:=ocamlfind ocamldoc
 
+OREBUILD:=./orebuild
+
 COMPFLAGS?:=# maybe set some additional compilation options
 
 SRC_DIR:=../src
@@ -53,7 +55,7 @@ all: ../src_ext/p1/build/p1.cma ../src_ext/e3/build/e3.cma ../src_ext/p4/build/p
 	make p1_to_ml
 	make ocaml_p4.ml
 	make cmo
-	make $(MLS_TO_EXEC:.ml=.native)
+#	make $(MLS_TO_EXEC:.ml=.native)
 
 test:
 	./ocaml.native os_command.lem
@@ -96,7 +98,9 @@ ocaml_p4.ml: ocaml.p4
 
 
 cmo: $(MLS)
-	$(CAMLC) $(CAMLCINCLUDES) $(COMPFLAGS) -c $(MLS)
+	$(CAMLDEP) *.mli *.ml >.depend
+	echo updated are: $?
+	$(CAMLC) $(CAMLCINCLUDES) $(COMPFLAGS) -c `$(OREBUILD) .depend $?`
 	touch cmo
 
 
@@ -129,7 +133,7 @@ clean:
 	rm -f $(GS:.p1=.ml) *.cppo *.p4 *.p4x *.p1x *.p1 *.txt *.lem
 	rm -f $(GS)
 	rm -f *.ml *.mli *.cmo *.cmi *.cmx *.native *.a *.o *.cma *.cmxa .depend cmo
-	rm -rf ocamldoc
+	rm -rf ocamldoc orebuild.exe
 
 FORCE:
 
