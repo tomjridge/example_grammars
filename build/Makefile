@@ -48,14 +48,10 @@ link: $(SRC_DIR)
 # -include .depend
 
 all: ../src_ext/p1/build/p1.cma ../src_ext/e3/build/e3.cma ../src_ext/p4/build/p4.cma before_all 
-	make grammar.native
-	make cppo_to
-	make p1x_to_p1
-	make p4x_to_p4
-	make p1_to_ml
-	make ocaml_p4.ml
-	make cmo
-	make $(MLS_TO_EXEC:.ml=.native)
+	make grammar.native cppo_to 
+	make p1x_to_p1 p4x_to_p4 
+	make p1_to_ml ocaml_p4.ml 
+	make cmo $(MLS_TO_EXEC:.ml=.native)
 
 test:
 	./ocaml.native os_command.lem
@@ -127,7 +123,7 @@ $(MLS_TO_EXEC:.ml=.native): %.native: %.ml
 	./grammar.native -assoc left $< > $@
 	chmod u-w $@
 
-
+.PRECIOUS: %.p1 %.ml %.p4
 
 clean:
 	rm -f $(GS:.p1=.ml) *.cppo *.p4 *.p4x *.p1x *.p1 *.txt *.lem
