@@ -34,15 +34,16 @@ default: all
 
 before_all:
 	make link 
-	make depend
+
+#	make depend
 
 link: $(SRC_DIR)
 	find $(SRC_DIR) -maxdepth 1 -type f -exec ln -sf \{\} . \;
 
-depend:
-	$(CAMLDEP) *.mli *.ml >.depend
-
--include .depend
+# depend:
+# 	$(CAMLDEP) *.mli *.ml >.depend
+# 
+# -include .depend
 
 all: ../src_ext/p1/build/p1.cma ../src_ext/e3/build/e3.cma ../src_ext/p4/build/p4.cma before_all 
 	make grammar.native
