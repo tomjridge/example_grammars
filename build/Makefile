@@ -5,7 +5,7 @@ CAMLOPT:=ocamlfind ocamlopt
 CAMLDEP:=ocamlfind ocamldep -one-line
 OCAMLDOC:=ocamlfind ocamldoc
 
-OREBUILD:=./orebuild
+#OREBUILD:=./orebuild
 
 COMPFLAGS?:=# maybe set some additional compilation options
 
@@ -48,16 +48,19 @@ link: $(SRC_DIR)
 # -include .depend
 
 all: ../src_ext/p1/build/p1.cma ../src_ext/e3/build/e3.cma ../src_ext/p4/build/p4.cma before_all 
-	make grammar.native cppo_to 
-	make p1x_to_p1 p4x_to_p4 
-	make p1_to_ml ocaml_p4.ml 
-	make cmo $(MLS_TO_EXEC:.ml=.native)
+	make grammar.native 
+	make $(MLS_TO_EXEC:.ml=.native)
+
+#	make grammar.native cppo_to 
+#	make p1x_to_p1 p4x_to_p4 
+#	make p1_to_ml ocaml_p4.ml 
+#	make cmo $(MLS_TO_EXEC:.ml=.native)
 
 test:
 	./ocaml.native os_command.lem
 	./ocaml_p4.native os_command.lem
 
-cppo_to: ocaml.p1x ocaml.p4x
+#cppo_to: ocaml.p1x ocaml.p4x
 
 ocaml.p1x: ocaml.cppo
 	$(CPPO) ocaml.cppo >ocaml.p1x
@@ -67,8 +70,8 @@ ocaml.p4x: ocaml.cppo
 
 
 
-P1X:=$(wildcard *.p1x)
-p1x_to_p1: $(P1X:.p1x=.p1)
+#P1X:=$(wildcard *.p1x)
+#p1x_to_p1: $(P1X:.p1x=.p1)
 
 eee3.p1: eee3.p1x grammar.native
 	rm -f $@
@@ -76,13 +79,13 @@ eee3.p1: eee3.p1x grammar.native
 	chmod u-w $@
 
 
-P4X:=$(wildcard *.p4x)
-p4x_to_p4: $(P4X:.p4x=.p4)
-
-
-
-P1S:=$(wildcard *.p1)
-p1_to_ml: $(P1S:.p1=.ml) 
+#P4X:=$(wildcard *.p4x)
+#p4x_to_p4: $(P4X:.p4x=.p4)
+#
+#
+#
+#P1S:=$(wildcard *.p1)
+#p1_to_ml: $(P1S:.p1=.ml) 
 
 
 
@@ -93,11 +96,11 @@ ocaml_p4.ml: ocaml.p4
 
 
 
-cmo: $(MLS)
-	$(CAMLDEP) *.mli *.ml >.depend
-	echo updated are: $?
-	$(CAMLC) $(CAMLCINCLUDES) $(COMPFLAGS) -c `$(OREBUILD) .depend $?`
-	touch cmo
+#cmo: $(MLS)
+#	$(CAMLDEP) *.mli *.ml >.depend
+#	echo updated are: $?
+#	$(CAMLC) $(CAMLCINCLUDES) $(COMPFLAGS) -c `$(OREBUILD) .depend $?`
+#	touch cmo
 
 
 
