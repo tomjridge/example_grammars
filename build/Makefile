@@ -10,7 +10,7 @@ OCAMLDOC:=ocamlfind ocamldoc
 COMPFLAGS?:=# maybe set some additional compilation options
 
 SRC_DIR:=../src
-MLS_TO_EXEC:= grammar.ml eee.ml eee2.ml eee3.ml ocaml.ml ocaml_p4.ml #
+MLS_TO_EXEC:= grammar.ml eee.ml eee2.ml eee3.ml ocaml_p1.ml ocaml_p4.ml #
 MLS:=$(shell ocamldep -sort *.ml *.mli)
 CMO:=$(MLS:.ml=.cmo)
 
@@ -62,11 +62,11 @@ test:
 
 #cppo_to: ocaml.p1x ocaml.p4x
 
-ocaml.p1x: ocaml.cppo
-	$(CPPO) ocaml.cppo >ocaml.p1x
+ocaml_p1.p1x: ocaml.cppo
+	$(CPPO) ocaml.cppo >$@
 
-ocaml.p4x: ocaml.cppo
-	$(CPPO) -D P4 ocaml.cppo >ocaml.p4x
+ocaml_p4.p4x: ocaml.cppo
+	$(CPPO) -D P4 ocaml.cppo >$@
 
 
 
@@ -89,10 +89,10 @@ eee3.p1: eee3.p1x grammar.native
 
 
 
-ocaml_p4.ml: ocaml.p4
-	rm -f $@
-	$(P1_GEN_P4) -g $< > $@ 
-	chmod u-w $@
+#ocaml_p4.ml: ocaml.p4
+#	rm -f $@
+#	$(P1_GEN_P4) -g $< > $@ 
+#	chmod u-w $@
 
 
 
@@ -111,20 +111,26 @@ $(MLS_TO_EXEC:.ml=.native): %.native: %.ml
 
 
 .SUFFIXES: .ml .p1 .p1x .p4x .p4
-.p1.ml:
-	rm -f $@
-	$(P1_GEN) -g $< > $@
-	chmod u-w $@
-
 .p1x.p1: 
 	rm -f $@
 	./grammar.native $< > $@
+	chmod u-w $@
+
+.p1.ml:
+	rm -f $@
+	$(P1_GEN) -g $< > $@
 	chmod u-w $@
 
 .p4x.p4:
 	rm -f $@
 	./grammar.native -assoc left $< > $@
 	chmod u-w $@
+
+.p4.ml:
+	rm -f $@
+	$(P1_GEN_P4) -g $< > $@
+	chmod u-w $@
+
 
 .PRECIOUS: %.p1 %.ml %.p4
 
