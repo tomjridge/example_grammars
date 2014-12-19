@@ -1,8 +1,8 @@
 SHELL:=bash
 
-CAMLC:=ocamlfind ocamlc
-CAMLOPT:=ocamlfind ocamlopt
-CAMLDEP:=ocamlfind ocamldep -one-line
+CAMLC:=ocamlfind ocamlc -linkpkg -package sexplib,sexplib.syntax -syntax camlp4o
+CAMLOPT:=ocamlfind ocamlopt -linkpkg -package sexplib,sexplib.syntax -syntax camlp4o
+CAMLDEP:=ocamlfind ocamldep -package sexplib,sexplib.syntax -syntax camlp4o -one-line
 OCAMLDOC:=ocamlfind ocamldoc
 
 #OREBUILD:=./orebuild

@@ -4,35 +4,36 @@ open P1_lib
 let c = content
 
 let ws = (parse_RE "[ \n]*")
-
-let fixme = parse_RE "FIXME"
+let wsplus = (parse_RE "[ \n]+")
 
 let eps = a ""
+
+let eof = parse_EOF
 
 let dest_Some x = (match x with
     | None -> (failwith "dest_Some: tu6")
     | Some x -> x)
 
-type ty_option = OPTION of alternation
-and group = GROUP of alternation
-and element = EL_RULENAME of rulename | EL_GROUP of group | EL_OPTION of ty_option | EL_CHAR_VAL (* FIXME *) | EL_NUM_VAL | EL_PROSE_VAL
-and repeat = REPEAT (* FIXME *)
-and repetition = REP of (repeat option * element)
-and concatenation = CONCATENATION of repetition list
-and alternation = ALTERNATION of concatenation list
-and elements = ELEMENTS of alternation
-and defined_as = DAS_EQUAL | DAS_EQUAL_SLASH
-and rulename = RULENAME of string
-and rule = RULE of (rulename * defined_as * elements)
-and rulelist_elt = RE_RULE of rule | RE_CWSP_CNL 
-and rulelist = rulelist_elt list (* nonempty *)
+open Sexplib.Std
 
-let _ALPHA = "[A-Za-z]"
-let _DIGIT = "[0-9]"
+type ty_option = OPTION of alternation 
+and group = GROUP of alternation 
+and element = EL_RULENAME of rulename | EL_GROUP of group | EL_OPTION of ty_option | EL_CHAR_VAL (* FIXME *) | EL_NUM_VAL | EL_PROSE_VAL 
+and repeat = REPEAT (* FIXME *) 
+and repetition = REP of (repeat option * element) 
+and concatenation = CONCATENATION of repetition list 
+and alternation = ALTERNATION of concatenation list 
+and elements = ELEMENTS of alternation 
+and defined_as = DAS_EQUAL | DAS_EQUAL_SLASH 
+and rulename = RULENAME of string 
+and rule = RULE of (rulename * defined_as * elements * string) 
+and rulelist_elt = RE_RULE of rule | RE_CWSP_CNL of string
+and rulelist = RULELIST of rulelist_elt list (* nonempty *) with sexp
+
 let rulename = parse_RE "[A-Za-z][-A-Za-z0-9]*"
 let repeat = parse_RE "[0-9]*[*][0-9]*\\|[0-9]+"
 let dquote = a "\""
-let char_vals = parse_RE "^[\"]*"
+let char_vals = parse_RE "[^\"]*"
 let one_star_bit = parse_RE "[01]+"
 let bin_val_rest = parse_RE "\\([.][0-1]+\\)+\\|[-][0-1]+"
 let one_star_digit = parse_RE "[0-9]+"
@@ -43,26 +44,34 @@ let prose_val_chars = parse_RE "[^>]*"
 let crlf = parse_RE "[\n]" (* FIXME really CR LF *)
 let vchar = parse_RE "[\x21-\x7E]"
 let wsp = parse_RE "[ \x09]"
+
 <<g<<
 
+S -> ?ws? RULELIST ?ws? ?eof? {{ x2 |> sexp_of_rulelist |> Sexplib.Sexp.to_string_hum |> print_endline }}
+
+(* ambiguity in rfc 2234: <<r = a b c \n ; comment>> the comment can attach to elements or be a separate rulelist_elt *)
+
 RULELIST -> 
-  RULELIST_ELT                          {{ [x1] }}
-  | RULELIST_ELT RULELIST               {{ x1 :: x2 }}
+  RULELIST_ELT                          {{ RULELIST[x1] }}
+  | RULELIST_ELT RULELIST               {{ match x2 with RULELIST(xs) -> RULELIST(x1 :: xs) }}
 
 RULELIST_ELT -> 
   RULE                                  {{ RE_RULE(x1) }}
-  | STAR_CWSP_CNL                       {{ RE_CWSP_CNL }}
+(*  | STAR_CWSP_CNL                       {{ RE_CWSP_CNL(c x1) }} *)
+  | ?wsplus? {{ RE_CWSP_CNL(c x1) }}  (* FIXME this change avoids ambiguity but doesn't allow isolated comments *)
 
-STAR_CWSP_CNL -> 
-  ?eps?                                 {{ () }}
-  | CWSP CNL STAR_CWSP_CNL              {{ () }}
+STAR_CWSP_CNL -> (* can start with ws *)
+  CNL                                   {{ x1 }}
+  | CWSP STAR_CWSP_CNL                  {{ ss_concat [x1;x2] |> dest_Some }}
 
-RULE -> RULENAME DEFINED_AS ELEMENTS CNL {{ RULE(x1,x2,x3) }}
+RULE -> RULENAME DEFINED_AS ELEMENTS CNL {{ RULE(x1,x2,x3,c x4) }}
 
 RULENAME -> ?rulename?                  {{ RULENAME (c x1) }}
 
+(* can start with ws *)
 DEFINED_AS -> STAR_CWSP EQUAL_OR_EQUAL_SLASH STAR_CWSP {{ x2 }}
 
+(* can start with ws *)
 STAR_CWSP -> 
   ?eps?                                 {{ () }}
   | CWSP STAR_CWSP                      {{ () }}
@@ -73,22 +82,26 @@ EQUAL_OR_EQUAL_SLASH ->
 
 ELEMENTS -> ALTERNATION STAR_CWSP       {{ ELEMENTS(x1) }}
 
+(* can start with whitespace *)
 CWSP -> 
-  ?wsp?                                 {{ () }}
-  | CNL ?wsp?                           {{ () }}
+  ?wsp?                                 {{ x1 }}
+  | CNL ?wsp?                           {{ ss_concat [x1;x2] |> dest_Some }}
 
 CNL -> 
-  COMMENT                               {{ () }}
-  | ?crlf?                              {{ () }}
+  COMMENT                               {{ x1 }}
+  | ?crlf?                              {{ x1 }}
 
-COMMENT -> ";" STAR_WSP_VCHAR ?crlf?    {{ () }}
+COMMENT -> ";" STAR_WSP_VCHAR ?crlf?    {{ ss_concat [x1;x2;x3] |> dest_Some }}
 
+(* can start with whitespace *)
 STAR_WSP_VCHAR -> 
-  ?eps?                                 {{ () }}
-  | ?wsp? ?vchar? STAR_WSP_VCHAR            {{ () }}
+  ?eps?                                 {{ x1 }}
+  | ?wsp? STAR_WSP_VCHAR                {{ ss_concat [x1;x2] |> dest_Some }}
+  | ?vchar? STAR_WSP_VCHAR              {{ ss_concat [x1;x2] |> dest_Some }}
 
 ALTERNATION -> CONCATENATION STAR_ALTERNATION_REST {{ ALTERNATION(x1::x2) }}
 
+(* can start with ws *)
 STAR_ALTERNATION_REST -> 
   ?eps?                                 {{ [] }}
   | STAR_CWSP "/" STAR_CWSP CONCATENATION STAR_ALTERNATION_REST {{ x4::x5 }}
@@ -139,6 +152,14 @@ HEX_VAL -> "x" ?one_star_hexdig? ?hex_val_rest? {{ ss_concat [x1;x2;x3] |> dest_
 
 PROSE_VAL -> "<" ?prose_val_chars? ">"  {{ x2 }}
 >>g>>
+
+let main () = 
+  let fname = Sys.argv.(1) in
+  let Some txt = read_file_as_string fname in
+  let eg = run_parser_string parse_S txt in
+  ()
+
+let _ = main ()
 
 
 (*
