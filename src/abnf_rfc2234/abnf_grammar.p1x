@@ -42,19 +42,33 @@ type cnl = CNL
 
 
 type ty_option = OPTION of alternation
-and type group = GROUP of alternation
-and type element = EL_RULENAME of rulename | EL_GROUP of group | EL_OPTION of ty_option | EL_CHAR_VAL (* FIXME *) | EL_NUM_VAL | EL_PROSE_VAL
-and type repeat = REPEAT (* FIXME *)
-and type repetition = REP of (repeat option * element)
-and type concatenation = CONCATENATION of repetition list
-and type alternation = ALTERNATION of concatenation list
-and type elements = ELEMENTS of alternation
-and type defined_as = DAS_EQUAL | DAS_EQUAL_SLASH
-and type rulename = RULENAME of string
-and type rule = RULE of (rulename * defined_as * elements)
-and type rulelist_elt = RE_RULE of rule | RE_CWSP_CNL 
-and type rulelist = rulelist_elt list (* nonempty *)
+and group = GROUP of alternation
+and element = EL_RULENAME of rulename | EL_GROUP of group | EL_OPTION of ty_option | EL_CHAR_VAL (* FIXME *) | EL_NUM_VAL | EL_PROSE_VAL
+and repeat = REPEAT (* FIXME *)
+and repetition = REP of (repeat option * element)
+and concatenation = CONCATENATION of repetition list
+and alternation = ALTERNATION of concatenation list
+and elements = ELEMENTS of alternation
+and defined_as = DAS_EQUAL | DAS_EQUAL_SLASH
+and rulename = RULENAME of string
+and rule = RULE of (rulename * defined_as * elements)
+and rulelist_elt = RE_RULE of rule | RE_CWSP_CNL 
+and rulelist = rulelist_elt list (* nonempty *)
 
+let rulename = fixme
+let repeat = fixme
+let dquote = a "\""
+let char_vals = fixme
+let one_star_bit = fixme
+let bin_val_rest = fixme
+let one_star_digit = fixme
+let dec_val_rest = fixme
+let one_star_hexdig = fixme
+let hex_val_rest = fixme
+let prose_val_chars = fixme
+let crlf = a "\n"
+let vchar = fixme
+let wsp = parse_RE "[ ]+"
 <<g<<
 
 RULELIST -> 
@@ -62,7 +76,7 @@ RULELIST ->
   | RULELIST_ELT RULELIST               {{ x1 :: x2 }}
 
 RULELIST_ELT -> 
-  RULE                                  {{ x1 }}
+  RULE                                  {{ RE_RULE(x1) }}
   | STAR_CWSP_CNL                       {{ RE_CWSP_CNL }}
 
 STAR_CWSP_CNL -> 
@@ -86,18 +100,18 @@ EQUAL_OR_EQUAL_SLASH ->
 ELEMENTS -> ALTERNATION STAR_CWSP       {{ ELEMENTS(x1) }}
 
 CWSP -> 
-  CWSP                                  {{ () }}
-  | CNL WSP                             {{ () }}
+  ?wsp?                                 {{ () }}
+  | CNL ?wsp?                           {{ () }}
 
 CNL -> 
   COMMENT                               {{ () }}
-  | CRLF                                {{ () }}
+  | ?crlf?                              {{ () }}
 
-COMMENT -> ";" STAR_WSP_VCHAR CRLF      {{ () }}
+COMMENT -> ";" STAR_WSP_VCHAR ?crlf?    {{ () }}
 
 STAR_WSP_VCHAR -> 
   ?eps?                                 {{ () }}
-  | WSP VCHAR STAR_WSP_VCHAR            {{ () }}
+  | ?wsp? ?vchar? STAR_WSP_VCHAR            {{ () }}
 
 ALTERNATION -> CONCATENATION STAR_ALTERNATION_REST {{ ALTERNATION(x1::x2) }}
 
@@ -105,7 +119,7 @@ STAR_ALTERNATION_REST ->
   ?eps?                                 {{ [] }}
   | STAR_CWSP "/" STAR_CWSP CONCATENATION STAR_ALTERNATION_REST {{ x4::x5 }}
 
-CONCATENATION -> REPETITION STAR_CONCATENTATION_REST {{ CONCATENATION(x1::x2) }}
+CONCATENATION -> REPETITION STAR_CONCATENATION_REST {{ CONCATENATION(x1::x2) }}
 
 STAR_CONCATENATION_REST -> 
   ?eps?                                 {{ [] }}
@@ -136,7 +150,7 @@ OPTION -> "[" STAR_CWSP ALTERNATION STAR_CWSP "]" {{ OPTION(x3) }}
                                ; without DQUOTE *)
 CHAR_VAL -> ?dquote? ?char_vals? ?dquote? {{ ss_concat [x1;x2;x3] }}
 
-NUL_VAL -> "%" NUM_VAL_REST             {{ ss_concat [x1;x2] }}
+NUM_VAL -> "%" NUM_VAL_REST             {{ ss_concat [x1;x2] }}
 
 NUM_VAL_REST ->
   BIN_VAL                               {{ x1 }}

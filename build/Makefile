@@ -10,7 +10,7 @@ OCAMLDOC:=ocamlfind ocamldoc
 COMPFLAGS?:=# maybe set some additional compilation options
 
 SRC_DIR:=../src
-MLS_TO_EXEC:= grammar.ml eee.ml eee2.ml eee3_a1.ml eee3_a2.ml ocaml_p1.ml ocaml_p4.ml #
+MLS_TO_EXEC:= grammar.ml eee.ml eee2.ml eee3_a1.ml eee3_a2.ml ocaml_p1.ml ocaml_p4.ml abnf_grammar.ml #
 MLS:=$(shell ocamldep -sort *.ml *.mli)
 CMO:=$(MLS:.ml=.cmo)
 
@@ -38,13 +38,17 @@ before_all:
 	make link 
 
 link: $(SRC_DIR)
-	find $(SRC_DIR) -maxdepth 1 -type f -exec ln -sf \{\} . \;
+	find $(SRC_DIR) -maxdepth 2 -type f -exec ln -sf \{\} . \;
 
 
 all: ../src_ext/p1/build/p1.cma ../src_ext/e3/build/e3.cma ../src_ext/p4/build/p4.cma before_all 
 	make grammar.native 
 	make $(MLS_TO_EXEC:.ml=.native)
 
+tmp: 
+	make before_all
+	make grammar.native
+	make abnf_grammar.native
 
 test:
 	./ocaml_p1.native os_command.lem

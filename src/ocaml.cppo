@@ -1,16 +1,9 @@
 (* we allow to work with both p1 and p4 *)
 open P1_lib
 
-(* FIXME this is now in P1 *)
-let ss_concat_2 (`SS(s,i,j)) (`SS(s,k,l)) = 
-  assert (j=k);
-  (`SS(s,i,l))
-
-let rec ss_concat xs = (match xs with
-    | [] -> failwith "ss_concat"
-    | [x] -> x
-    | x::xs -> ss_concat_2 x (ss_concat xs))
-
+let dest_Some x = (match x with
+    | None -> (failwith "dest_Some: sdi")
+    | Some x -> x)
 
 (* terminal parsers for P1 *)
 module T1 = struct
@@ -36,10 +29,10 @@ module T1 = struct
   let constr x = x |> _Ident |> List.filter (fun (x,_) -> not (List.mem (c x) reserved_Idents))
   
   
-  let comment = ((a "(*") **> (until_a "*)") **> (a "*)")) >> (fun (x,(y,z)) -> ss_concat [x;y;z])
+  let comment = ((a "(*") **> (until_a "*)") **> (a "*)")) >> (fun (x,(y,z)) -> ss_concat [x;y;z] |> dest_Some)
   
   let ws = (parse_RE "[ \n]*")
-  let ws = ws ||| ((ws **> comment **> ws) >> (fun (x,(y,z)) -> ss_concat [x;y;z]))
+  let ws = ws ||| ((ws **> comment **> ws) >> (fun (x,(y,z)) -> ss_concat [x;y;z] |> dest_Some))
   let w = ws
   
 end
@@ -195,7 +188,7 @@ MODULEPATH -> ?_Ident?                                      {{ Tex.module_path (
 
 (* 6.4 Type expressions; following for type defns FIXME needs tidying up  *)
 
-TYPEXPR -> "'" ?ident?                                      {{ Tex.tyvar ([x1;x2]|>ss_concat|>c) }}
+TYPEXPR -> "'" ?ident?                                      {{ Tex.tyvar ([x1;x2]|>ss_concat|>dest_Some|>c) }}
   | "(" w1=?w? t=TYPEXPR w2=?w? ")"                         {{ "("^(Tex.w w1)^t^(Tex.w w2)^")" }}
   | t1=TYPEXPR w1=?w? "->" w2=?w? t2=TYPEXPR                {{ t1^(Tex.w w1)^"{\\rightarrow}"^(Tex.w w2)^t2 }}
   | s1=TYPEXPR w1=?w? "*" w2=?w? s2=TYPEXPR                 {{ s1^(Tex.w w1)^"{\\times}"^(Tex.w w2)^s2 }} (* FIXME ambiguity *)
@@ -205,7 +198,7 @@ TYPEXPR -> "'" ?ident?                                      {{ Tex.tyvar ([x1;x2
 TYPEXPRA -> TYPEXPR                                         {{ x1 }}
   | TYPEXPR ?w? TYPEXPRA                                    {{ x1^(Tex.w x2)^x3 }}
 
-OCAMLTYPEXPR -> "'" ?ident?                                 {{ Tex.tyvar ([x1;x2]|>ss_concat|>c) }}
+OCAMLTYPEXPR -> "'" ?ident?                                 {{ Tex.tyvar ([x1;x2]|>ss_concat|>dest_Some|>c) }}
   | "(" w1=?w? t=TYPEXPR w2=?w? ")"                         {{ "("^(Tex.w w1)^t^(Tex.w w2)^")" }}
   | t1=TYPEXPR w1=?w? "->" w2=?w? t2=TYPEXPR                {{ t1^(Tex.w w1)^"{\\rightarrow}"^(Tex.w w2)^t2 }}
   | s1=TYPEXPR w1=?w? "*" w2=?w? s2=TYPEXPR                 {{ s1^(Tex.w w1)^"{\\times}"^(Tex.w w2)^s2 }} (* FIXME ambiguity *)
@@ -338,7 +331,7 @@ OCAMLTYPEPARAMS -> TYPEPARAM                                {{ x1 }}
 TYPEPARAMSA -> TYPEPARAM                                    {{ x1 }}
   | TYPEPARAM ?w? "," ?w? TYPEPARAMSA                       {{ x1^(Tex.w x2)^(c x3)^(Tex.w x4)^x5 }}
 
-TYPEPARAM -> "'" ?ident?                                    {{ Tex.tyvar([x1;x2]|>ss_concat|>c) }}
+TYPEPARAM -> "'" ?ident?                                    {{ Tex.tyvar([x1;x2]|>ss_concat|>dest_Some|>c) }}
 
 TYPECONSTRNAME -> ?ident?                                   {{ Tex._TYPECONSTRNAME (c x1) }}
 

@@ -25,7 +25,7 @@ let rec ss_concat xs = (match xs with
 let comment = ((a "(*") **> (until_a "*)") **> (a "*)")) >> (fun (x,(y,z)) -> ss_concat [x;y;z])
 let ws = ws ||| ((ws **> comment **> ws) >> (fun (x,(y,z)) -> ss_concat [x;y;z]))
 
-let nt = parse_RE "[A-Z]+"
+let nt = parse_RE "[A-Z_]+"
 let not_dquote = until_a "\""
 let not_squote = until_a "'"
 let not_q = until_a "?"
