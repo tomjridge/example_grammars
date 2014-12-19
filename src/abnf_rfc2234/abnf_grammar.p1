@@ -1,0 +1,161 @@
+(* specification of abnf following rfc 2234 *)
+open P1_lib
+
+let c = content
+
+let header = until_a ("<<"^"g<<")
+let start_of_g = a ("<<"^"g<<")
+let end_of_g = a (">>"^"g>>")
+let grammar = until_a (">>"^"g>>")
+let footer = until_EOF
+let ws = (parse_RE "[ \n]*")
+
+let ss_concat_2 : 'a substring -> 'a substring -> 'a substring = fun (`SS(s,i,k)) (`SS(s',k',j)) ->
+  assert(k'=k && s'=s);
+  `SS(s,i,j)
+
+let rec ss_concat xs = (match xs with
+  | [x] -> x
+  | x::xs -> (ss_concat_2 x (ss_concat xs)))
+
+let comment = ((a "(*") **> (until_a "*)") **> (a "*)")) >> (fun (x,(y,z)) -> ss_concat [x;y;z])
+let ws = ws ||| ((ws **> comment **> ws) >> (fun (x,(y,z)) -> ss_concat [x;y;z]))
+
+let nt = parse_RE "[A-Z]+"
+let not_dquote = until_a "\""
+let not_squote = until_a "'"
+let not_q = until_a "?"
+
+let fixme = parse_RE "FIXME"
+
+let open_act = ((a "{") **> (until_a "{") **> (a "{")) >> (fun (_,(tag,_)) -> (c tag))
+
+let act = (open_act **> until_a "}}" **> (a "}}")) >> (fun (tag,(x,_)) -> `ACT(tag,c x))
+
+let id = fun x -> x
+
+let var = parse_RE "[a-z][a-z0-9]*"
+
+let eps = a ""
+
+type cnl = CNL
+
+
+type ty_option = OPTION of alternation
+and type group = GROUP of alternation
+and type element = EL_RULENAME of rulename | EL_GROUP of group | EL_OPTION of ty_option | EL_CHAR_VAL (* FIXME *) | EL_NUM_VAL | EL_PROSE_VAL
+and type repeat = REPEAT (* FIXME *)
+and type repetition = REP of (repeat option * element)
+and type concatenation = CONCATENATION of repetition list
+and type alternation = ALTERNATION of concatenation list
+and type elements = ELEMENTS of alternation
+and type defined_as = DAS_EQUAL | DAS_EQUAL_SLASH
+and type rulename = RULENAME of string
+and type cnl = unit 
+and type rule = RULE of (rulename * defined_as * elements * cnl)
+and type rulelist_elt = RE_RULE of rule | RE_CWSP_CNL 
+and type rulelist = rulelist_elt list (* nonempty *)
+
+<<g<<
+
+RULELIST -> 
+  RULELIST_ELT {{ x1 }}
+  | RULELIST_ELT RULELIST {{ x1 :: x2 }}
+
+RULELIST_ELT -> 
+  RULE  {{ x1 }}
+  | STAR_CWSP_CNL {{ RE_CWSP_CNL }}
+
+STAR_CWSP_CNL -> 
+  ?eps? {{ () }}
+  | CWSP CNL STAR_CWSP_CNL {{ () }}
+
+RULE -> RULENAME DEFINED_AS ELEMENTS CNL {{ RULE(x1,x2,x3,x4) }}
+
+RULENAME -> ?rulename? {{ RULENAME (c x1) }}
+
+DEFINED_AS -> STAR_CWSP EQUAL_OR_EQUAL_SLASH STAR_CWSP {{ x2
+
+STAR_CWSP -> 
+  ?eps? {{ () }}
+  | CWSP STAR_CWSP {{ () }}
+
+EQUAL_OR_EQUAL_SLASH -> 
+  "=" {{ DAS_EQUAL }}
+  | "=/" {{ DAS_EQUAL_SLASH }}
+
+ELEMENTS -> ALTERNATION STAR_CWSP {{ ELEMENTS(x1) }}
+
+CWSP -> 
+  CWSP {{ () }}
+  | CNL WSP {{ () }}
+
+CNL -> 
+  COMMENT {{ () }}
+  | CRLF {{ () }}
+
+COMMENT -> ";" STAR_WSP_VCHAR CRLF {{ () }}
+
+STAR_WSP_VCHAR -> 
+  ?eps?  {{ () }}
+  | WSP VCHAR STAR_WSP_VCHAR {{ () }}
+
+ALTERNATION -> CONCATENATION STAR_ALTERNATION_REST {{ ALTERNATION(x1::x2) }}
+
+STAR_ALTERNATION_REST -> 
+  ?eps? {{ [] }}
+  | STAR_CWSP "/" STAR_CWSP CONCATENATION STAR_ALTERNATION_REST {{ x4::x5 }}
+
+CONCATENATION -> REPETITION STAR_CONCATENTATION_REST {{ CONCATENATION(x1::x2) }}
+
+STAR_CONCATENATION_REST -> 
+  ?eps? {{ [] }}
+  | ONE_STAR_CWSP REPETITION STAR_CONCATENATION_REST {{ x2::x3 }}
+
+ONE_STAR_CWSP -> CWSP STAR_CWSP {{ () }}
+
+REPETITION -> 
+  ELEMENT {{ REP(None,x1) }}
+  | REPEAT ELEMENT {{ REP(Some(x1),x2) }}
+
+REPEAT = ?repeat? {{ REPEAT }}
+
+ELEMENT = 
+  RULENAME {{ EL_RULENAME x1 }}
+  | GROUP  {{ EL_GROUP x1 }}
+  | OPTION {{ EL_OPTION x1 }}
+  | CHAR_VAL {{ EL_CHAR_VAL }}
+  | NUM_VAL {{ EL_NUM_VAL }}
+  | PROSE_VAL {{ EL_PROSE_VAL }}
+
+GROUP = "(" STAR_CWSP ALTERNATION STAR_CWSP ")" {{ GROUP(x3) }}
+
+OPTION = "[" STAR_CWSP ALTERNATION STAR_CWSP "]" {{ OPTION(x3) }}
+
+(*char-val       =  DQUOTE *(%x20-21 / %x23-7E) DQUOTE
+                               ; quoted string of SP and VCHAR
+                               ; without DQUOTE *)
+CHAR_VAL = ?dquote? ?char_vals? ?dquote? {{ ss_concat [x1;x2;x3] }}
+
+NUL_VAL = "%" NUM_VAL_REST {{ ss_concat [x1;x2] }}
+
+NUM_VAL_REST = 
+  BIN_VAL {{ x1 }}
+  | DEC_VAL {{ x1 }}
+  | HEX_VAL {{ x1 }}
+
+BIN_VAL -> "b" ?one_star_bit? ?bin_val_rest? {{ ss_concat [x1;x2;x3] }}
+
+DEC_VAL -> "d" ?one_star_digit? ?dec_val_rest? {{ ss_concat [x1;x2;x3] }}
+
+HEX_VAL -> "x" ?one_star_hexdig? ?hex_val_rest? {{ ss_concat [x1;x2;x3] }}
+
+PROSE_VAL -> "<" ?prose_val_chars? ">" {{ x2 }}
+>>g>>
+
+
+(*
+Local Variables:
+mode: tuareg
+End:
+*)
