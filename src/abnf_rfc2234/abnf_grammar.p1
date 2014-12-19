@@ -58,90 +58,90 @@ and type rulelist = rulelist_elt list (* nonempty *)
 <<g<<
 
 RULELIST -> 
-  RULELIST_ELT {{ x1 }}
-  | RULELIST_ELT RULELIST {{ x1 :: x2 }}
+  RULELIST_ELT                          {{ [x1] }}
+  | RULELIST_ELT RULELIST               {{ x1 :: x2 }}
 
 RULELIST_ELT -> 
-  RULE  {{ x1 }}
-  | STAR_CWSP_CNL {{ RE_CWSP_CNL }}
+  RULE                                  {{ x1 }}
+  | STAR_CWSP_CNL                       {{ RE_CWSP_CNL }}
 
 STAR_CWSP_CNL -> 
-  ?eps? {{ () }}
-  | CWSP CNL STAR_CWSP_CNL {{ () }}
+  ?eps?                                 {{ () }}
+  | CWSP CNL STAR_CWSP_CNL              {{ () }}
 
 RULE -> RULENAME DEFINED_AS ELEMENTS CNL {{ RULE(x1,x2,x3) }}
 
-RULENAME -> ?rulename? {{ RULENAME (c x1) }}
+RULENAME -> ?rulename?                  {{ RULENAME (c x1) }}
 
 DEFINED_AS -> STAR_CWSP EQUAL_OR_EQUAL_SLASH STAR_CWSP {{ x2 }}
 
 STAR_CWSP -> 
-  ?eps? {{ () }}
-  | CWSP STAR_CWSP {{ () }}
+  ?eps?                                 {{ () }}
+  | CWSP STAR_CWSP                      {{ () }}
 
 EQUAL_OR_EQUAL_SLASH -> 
-  "=" {{ DAS_EQUAL }}
-  | "=/" {{ DAS_EQUAL_SLASH }}
+  "="                                   {{ DAS_EQUAL }}
+  | "=/"                                {{ DAS_EQUAL_SLASH }}
 
-ELEMENTS -> ALTERNATION STAR_CWSP {{ ELEMENTS(x1) }}
+ELEMENTS -> ALTERNATION STAR_CWSP       {{ ELEMENTS(x1) }}
 
 CWSP -> 
-  CWSP {{ () }}
-  | CNL WSP {{ () }}
+  CWSP                                  {{ () }}
+  | CNL WSP                             {{ () }}
 
 CNL -> 
-  COMMENT {{ () }}
-  | CRLF {{ () }}
+  COMMENT                               {{ () }}
+  | CRLF                                {{ () }}
 
-COMMENT -> ";" STAR_WSP_VCHAR CRLF {{ () }}
+COMMENT -> ";" STAR_WSP_VCHAR CRLF      {{ () }}
 
 STAR_WSP_VCHAR -> 
-  ?eps?  {{ () }}
-  | WSP VCHAR STAR_WSP_VCHAR {{ () }}
+  ?eps?                                 {{ () }}
+  | WSP VCHAR STAR_WSP_VCHAR            {{ () }}
 
 ALTERNATION -> CONCATENATION STAR_ALTERNATION_REST {{ ALTERNATION(x1::x2) }}
 
 STAR_ALTERNATION_REST -> 
-  ?eps? {{ [] }}
+  ?eps?                                 {{ [] }}
   | STAR_CWSP "/" STAR_CWSP CONCATENATION STAR_ALTERNATION_REST {{ x4::x5 }}
 
 CONCATENATION -> REPETITION STAR_CONCATENTATION_REST {{ CONCATENATION(x1::x2) }}
 
 STAR_CONCATENATION_REST -> 
-  ?eps? {{ [] }}
+  ?eps?                                 {{ [] }}
   | ONE_STAR_CWSP REPETITION STAR_CONCATENATION_REST {{ x2::x3 }}
 
-ONE_STAR_CWSP -> CWSP STAR_CWSP {{ () }}
+ONE_STAR_CWSP -> CWSP STAR_CWSP         {{ () }}
 
 REPETITION -> 
-  ELEMENT {{ REP(None,x1) }}
-  | REPEAT ELEMENT {{ REP(Some(x1),x2) }}
+  ELEMENT                               {{ REP(None,x1) }}
+  | REPEAT ELEMENT                      {{ REP(Some(x1),x2) }}
 
-REPEAT = ?repeat? {{ REPEAT }}
+REPEAT -> ?repeat?                      {{ REPEAT }}
 
-ELEMENT = 
-  RULENAME {{ EL_RULENAME x1 }}
-  | GROUP  {{ EL_GROUP x1 }}
-  | OPTION {{ EL_OPTION x1 }}
-  | CHAR_VAL {{ EL_CHAR_VAL }}
-  | NUM_VAL {{ EL_NUM_VAL }}
-  | PROSE_VAL {{ EL_PROSE_VAL }}
+ELEMENT ->
+  RULENAME                              {{ EL_RULENAME x1 }}
+  | GROUP                               {{ EL_GROUP x1 }}
+  | OPTION                              {{ EL_OPTION x1 }}
+  | CHAR_VAL                            {{ EL_CHAR_VAL }}
+  | NUM_VAL                             {{ EL_NUM_VAL }}
+  | PROSE_VAL                           {{ EL_PROSE_VAL }}
 
-GROUP = "(" STAR_CWSP ALTERNATION STAR_CWSP ")" {{ GROUP(x3) }}
+GROUP -> "(" STAR_CWSP ALTERNATION STAR_CWSP ")" {{ GROUP(x3) }}
 
-OPTION = "[" STAR_CWSP ALTERNATION STAR_CWSP "]" {{ OPTION(x3) }}
+OPTION -> "[" STAR_CWSP ALTERNATION STAR_CWSP "]" {{ OPTION(x3) }}
 
 (*char-val       =  DQUOTE *(%x20-21 / %x23-7E) DQUOTE
                                ; quoted string of SP and VCHAR
                                ; without DQUOTE *)
-CHAR_VAL = ?dquote? ?char_vals? ?dquote? {{ ss_concat [x1;x2;x3] }}
+CHAR_VAL -> ?dquote? ?char_vals? ?dquote? {{ ss_concat [x1;x2;x3] }}
 
-NUL_VAL = "%" NUM_VAL_REST {{ ss_concat [x1;x2] }}
+NUL_VAL -> "%" NUM_VAL_REST             {{ ss_concat [x1;x2] }}
 
-NUM_VAL_REST = 
-  BIN_VAL {{ x1 }}
-  | DEC_VAL {{ x1 }}
-  | HEX_VAL {{ x1 }}
+NUM_VAL_REST ->
+  BIN_VAL                               {{ x1 }}
+  | DEC_VAL                             {{ x1 }}
+  | HEX_VAL                             {{ x1 }}
 
 BIN_VAL -> "b" ?one_star_bit? ?bin_val_rest? {{ ss_concat [x1;x2;x3] }}
 
@@ -149,7 +149,7 @@ DEC_VAL -> "d" ?one_star_digit? ?dec_val_rest? {{ ss_concat [x1;x2;x3] }}
 
 HEX_VAL -> "x" ?one_star_hexdig? ?hex_val_rest? {{ ss_concat [x1;x2;x3] }}
 
-PROSE_VAL -> "<" ?prose_val_chars? ">" {{ x2 }}
+PROSE_VAL -> "<" ?prose_val_chars? ">"  {{ x2 }}
 >>g>>
 
 
