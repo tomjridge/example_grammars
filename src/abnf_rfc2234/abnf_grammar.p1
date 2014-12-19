@@ -51,8 +51,7 @@ and type alternation = ALTERNATION of concatenation list
 and type elements = ELEMENTS of alternation
 and type defined_as = DAS_EQUAL | DAS_EQUAL_SLASH
 and type rulename = RULENAME of string
-and type cnl = unit 
-and type rule = RULE of (rulename * defined_as * elements * cnl)
+and type rule = RULE of (rulename * defined_as * elements)
 and type rulelist_elt = RE_RULE of rule | RE_CWSP_CNL 
 and type rulelist = rulelist_elt list (* nonempty *)
 
@@ -70,7 +69,7 @@ STAR_CWSP_CNL ->
   ?eps? {{ () }}
   | CWSP CNL STAR_CWSP_CNL {{ () }}
 
-RULE -> RULENAME DEFINED_AS ELEMENTS CNL {{ RULE(x1,x2,x3,x4) }}
+RULE -> RULENAME DEFINED_AS ELEMENTS CNL {{ RULE(x1,x2,x3) }}
 
 RULENAME -> ?rulename? {{ RULENAME (c x1) }}
 
