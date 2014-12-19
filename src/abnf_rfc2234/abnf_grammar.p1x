@@ -3,43 +3,15 @@ open P1_lib
 
 let c = content
 
-let header = until_a ("<<"^"g<<")
-let start_of_g = a ("<<"^"g<<")
-let end_of_g = a (">>"^"g>>")
-let grammar = until_a (">>"^"g>>")
-let footer = until_EOF
 let ws = (parse_RE "[ \n]*")
-
-let ss_concat_2 : 'a substring -> 'a substring -> 'a substring = fun (`SS(s,i,k)) (`SS(s',k',j)) ->
-  assert(k'=k && s'=s);
-  `SS(s,i,j)
-
-let rec ss_concat xs = (match xs with
-  | [x] -> x
-  | x::xs -> (ss_concat_2 x (ss_concat xs)))
-
-let comment = ((a "(*") **> (until_a "*)") **> (a "*)")) >> (fun (x,(y,z)) -> ss_concat [x;y;z])
-let ws = ws ||| ((ws **> comment **> ws) >> (fun (x,(y,z)) -> ss_concat [x;y;z]))
-
-let nt = parse_RE "[A-Z]+"
-let not_dquote = until_a "\""
-let not_squote = until_a "'"
-let not_q = until_a "?"
 
 let fixme = parse_RE "FIXME"
 
-let open_act = ((a "{") **> (until_a "{") **> (a "{")) >> (fun (_,(tag,_)) -> (c tag))
-
-let act = (open_act **> until_a "}}" **> (a "}}")) >> (fun (tag,(x,_)) -> `ACT(tag,c x))
-
-let id = fun x -> x
-
-let var = parse_RE "[a-z][a-z0-9]*"
-
 let eps = a ""
 
-type cnl = CNL
-
+let dest_Some x = (match x with
+    | None -> (failwith "dest_Some: tu6")
+    | Some x -> x)
 
 type ty_option = OPTION of alternation
 and group = GROUP of alternation
@@ -55,20 +27,22 @@ and rule = RULE of (rulename * defined_as * elements)
 and rulelist_elt = RE_RULE of rule | RE_CWSP_CNL 
 and rulelist = rulelist_elt list (* nonempty *)
 
-let rulename = fixme
-let repeat = fixme
+let _ALPHA = "[A-Za-z]"
+let _DIGIT = "[0-9]"
+let rulename = parse_RE "[A-Za-z][-A-Za-z0-9]*"
+let repeat = parse_RE "[0-9]*[*][0-9]*\\|[0-9]+"
 let dquote = a "\""
-let char_vals = fixme
-let one_star_bit = fixme
-let bin_val_rest = fixme
-let one_star_digit = fixme
-let dec_val_rest = fixme
-let one_star_hexdig = fixme
-let hex_val_rest = fixme
-let prose_val_chars = fixme
-let crlf = a "\n"
-let vchar = fixme
-let wsp = parse_RE "[ ]+"
+let char_vals = parse_RE "^[\"]*"
+let one_star_bit = parse_RE "[01]+"
+let bin_val_rest = parse_RE "\\([.][0-1]+\\)+\\|[-][0-1]+"
+let one_star_digit = parse_RE "[0-9]+"
+let dec_val_rest = parse_RE "\\([.][0-9]+\\)+\\|[-][0-9]+"
+let one_star_hexdig = parse_RE "[0-9A-F]+"
+let hex_val_rest = parse_RE "\\([.][0-9A-F]+\\)+\\|[-][0-9A-F]+"
+let prose_val_chars = parse_RE "[^>]*"
+let crlf = parse_RE "[\n]" (* FIXME really CR LF *)
+let vchar = parse_RE "[\x21-\x7E]"
+let wsp = parse_RE "[ \x09]"
 <<g<<
 
 RULELIST -> 
@@ -148,20 +122,20 @@ OPTION -> "[" STAR_CWSP ALTERNATION STAR_CWSP "]" {{ OPTION(x3) }}
 (*char-val       =  DQUOTE *(%x20-21 / %x23-7E) DQUOTE
                                ; quoted string of SP and VCHAR
                                ; without DQUOTE *)
-CHAR_VAL -> ?dquote? ?char_vals? ?dquote? {{ ss_concat [x1;x2;x3] }}
+CHAR_VAL -> ?dquote? ?char_vals? ?dquote? {{ ss_concat [x1;x2;x3] |> dest_Some }}
 
-NUM_VAL -> "%" NUM_VAL_REST             {{ ss_concat [x1;x2] }}
+NUM_VAL -> "%" NUM_VAL_REST             {{ ss_concat [x1;x2] |> dest_Some }}
 
 NUM_VAL_REST ->
   BIN_VAL                               {{ x1 }}
   | DEC_VAL                             {{ x1 }}
   | HEX_VAL                             {{ x1 }}
 
-BIN_VAL -> "b" ?one_star_bit? ?bin_val_rest? {{ ss_concat [x1;x2;x3] }}
+BIN_VAL -> "b" ?one_star_bit? ?bin_val_rest? {{ ss_concat [x1;x2;x3] |> dest_Some }}
 
-DEC_VAL -> "d" ?one_star_digit? ?dec_val_rest? {{ ss_concat [x1;x2;x3] }}
+DEC_VAL -> "d" ?one_star_digit? ?dec_val_rest? {{ ss_concat [x1;x2;x3] |> dest_Some }}
 
-HEX_VAL -> "x" ?one_star_hexdig? ?hex_val_rest? {{ ss_concat [x1;x2;x3] }}
+HEX_VAL -> "x" ?one_star_hexdig? ?hex_val_rest? {{ ss_concat [x1;x2;x3] |> dest_Some }}
 
 PROSE_VAL -> "<" ?prose_val_chars? ">"  {{ x2 }}
 >>g>>
