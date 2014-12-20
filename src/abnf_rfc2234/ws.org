@@ -17,3 +17,28 @@
     - CONCATENATION is REPETITION, possibly repeated and separated by ONE_STAR_CWSP
   - STAR_ALTERNATION_REST
     - ALTERNATION is CONCATNEATION possibly repeated and separated
+
+  - after transforming the grammar to make ws processing more
+    apparent, we have the following:
+
+>    RULELIST_ELT -> 
+>      RULE STAR_CWSP CNL                    {{ RE_RULE(x1) }}
+>     | STAR_CWSP_CNL                       {{ RE_CWSP_CNL(c x1) }} 
+
+  - CWSP matches at least one whitespace character; can match a
+    comment, but subsequent line must start with at least one
+    character of wsp
+  - STAR_CWSP can be eps, or can match a comment, followed by
+    whitespace at beginning of line, or multiple comments followed by
+    ws at beginning of line
+  - this is ambiguous in several ways:
+    - a rule `rn = a b c ; comm CRLF` must have the comment attached
+      to the rule (because CNL matches the crlf end of line, but
+      STAR_CWSP does not match an end of line)
+    - but STAR_CWSP may also match multiple comments separated by at least one whitespace
+    - STAR_CWSP_CNL matches ws followed by comment followed by
+      newline; thus `rn = a b c ; comm1 CRLF ; comm2 CRLF` can have
+      the second comment attached to the rule, or parsed as a separate RULELIST_ELT
+    - so `rn = a b c ; comm1 CRLF;comm2` must have comm2 as a separate
+      rulelist_elt because it is not indented by ws
+    - thus, a possible fix is to make the STAR_CWSP_CNL alternative be simply PLUS_CNL

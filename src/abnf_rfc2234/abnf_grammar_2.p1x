@@ -56,15 +56,17 @@ RULELIST ->
   | RULELIST_ELT RULELIST               {{ match x2 with RULELIST(xs) -> RULELIST(x1 :: xs) }}
 
 RULELIST_ELT -> 
-  RULE CNL                                {{ RE_RULE(x1) }}
-(*  | STAR_CWSP_CNL                       {{ RE_CWSP_CNL(c x1) }} *)
-  | ?wsplus? {{ RE_CWSP_CNL(c x1) }}  (* FIXME this change avoids ambiguity but doesn't allow isolated comments *)
+  RULE STAR_CWSP CNL                    {{ RE_RULE(x1) }}
+  | PLUS_CNL                            {{ RE_CWSP_CNL(c x1) }} (* FIXME avoids ambiguity *)
 
-RULE -> RULENAME STAR_CWSP DEFINED_AS STAR_CWSP ELEMENTS STAR_CWSP {{ RULE(x1,x3,x5) }}
+PLUS_CNL ->
+  CNL {{ x1 }}
+  | CNL PLUS_CNL {{ ss_concat [x1;x2] |> dest_Some }}
+
+RULE -> RULENAME STAR_CWSP DEFINED_AS STAR_CWSP ELEMENTS {{ RULE(x1,x3,x5) }}
 
 RULENAME -> ?rulename?                  {{ RULENAME (c x1) }}
 
-(* can start with ws *)
 DEFINED_AS -> EQUAL_OR_EQUAL_SLASH      {{ x2 }}
 
 EQUAL_OR_EQUAL_SLASH -> 
@@ -101,8 +103,7 @@ OPTION -> "[" STAR_CWSP ALTERNATION STAR_CWSP "]" {{ OPTION(x3) }}
 
 
 
-
-(* can start with whitespace *)
+(* whitespace and comments *)
 STAR_WSP_VCHAR -> 
   ?eps?                                 {{ x1 }}
   | ?wsp? STAR_WSP_VCHAR                {{ ss_concat [x1;x2] |> dest_Some }}
@@ -114,12 +115,10 @@ CNL ->
   COMMENT                               {{ x1 }}
   | ?crlf?                              {{ x1 }}
 
-(* can start with whitespace *)
 CWSP -> 
   ?wsp?                                 {{ x1 }}
   | CNL ?wsp?                           {{ ss_concat [x1;x2] |> dest_Some }}
 
-(* can start with ws *)
 STAR_CWSP -> 
   ?eps?                                 {{ () }}
   | CWSP STAR_CWSP                      {{ () }}

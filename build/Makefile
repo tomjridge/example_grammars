@@ -49,6 +49,7 @@ tmp:
 	make before_all
 	make grammar.native
 	make abnf_grammar.native
+	make abnf_grammar_2.native
 
 test:
 	./ocaml_p1.native os_command.lem
