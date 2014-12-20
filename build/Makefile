@@ -111,8 +111,8 @@ $(MLS_TO_EXEC:.ml=.native): %.native: %.ml
 clean:
 	rm -f $(GS:.p1=.ml) *.cppo *.p4 *.p4x *.p1x *.p1 *.txt *.lem
 	rm -f $(GS)
-	rm -f *.ml *.mli *.cmo *.cmi *.cmx *.native *.a *.o *.cma *.cmxa .depend cmo
-	rm -f *.org
+	rm -f *.ml *.mli *.cmo *.cmi *.cmx *.native *.a *.o *.cma *.cmxa .depend depend cmo
+	rm -f *.org 
 	rm -rf ocamldoc orebuild.exe
 
 FORCE:
