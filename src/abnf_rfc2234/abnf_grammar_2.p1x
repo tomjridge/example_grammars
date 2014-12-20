@@ -52,8 +52,7 @@ S -> ?ws? RULELIST ?ws? ?eof? {{ x2 |> sexp_of_rulelist |> Sexplib.Sexp.to_strin
 (* ambiguity in rfc 2234: <<r = a b c \n ; comment>> the comment can attach to elements or be a separate rulelist_elt *)
 
 RULELIST -> 
-  RL_ELTS                               {{ x1 }}
-  | RL_ELTS WS_AND_COMMENTS             {{ x1 }}
+  RL_ELTS WS_AND_COMMENTS             {{ x1 }}
 
 RL_ELTS -> 
   RULELIST_ELT                          {{ RULELIST[x1] }}
