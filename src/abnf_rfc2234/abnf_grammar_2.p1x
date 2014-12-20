@@ -52,18 +52,15 @@ S -> ?ws? RULELIST ?ws? ?eof? {{ x2 |> sexp_of_rulelist |> Sexplib.Sexp.to_strin
 (* ambiguity in rfc 2234: <<r = a b c \n ; comment>> the comment can attach to elements or be a separate rulelist_elt *)
 
 RULELIST -> 
-  RL_ELTS WS_AND_COMMENTS             {{ x1 }}
+  RULE WS_AND_COMMENTS RULELIST_REST    {{ match x3 with RULELIST(xs) -> RULELIST(RE_RULE(x1)::xs) }}
 
-RL_ELTS -> 
-  RULELIST_ELT                          {{ RULELIST[x1] }}
-  | RULELIST_ELT WS_AND_COMMENTS RL_ELTS  {{ match x3 with RULELIST(xs) -> RULELIST(x1 :: xs) }}
+RULELIST_REST ->
+  ?eps?                                 {{ RULELIST([]) }}
+  | RULELIST                            {{ x1 }}
 
 WS_AND_COMMENTS -> 
   ?eps?                                 {{ x1 }}
   | STAR_CWSP CNL WS_AND_COMMENTS       {{ ss_concat [x1;x2;x3] |> dest_Some }}
-
-RULELIST_ELT -> 
-  RULE                                  {{ RE_RULE(x1) }}
 
 RULE -> RULENAME STAR_CWSP DEFINED_AS STAR_CWSP ELEMENTS {{ RULE(x1,x3,x5) }}
 
