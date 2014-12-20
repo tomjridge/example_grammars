@@ -52,12 +52,20 @@ S -> ?ws? RULELIST ?ws? ?eof? {{ x2 |> sexp_of_rulelist |> Sexplib.Sexp.to_strin
 (* ambiguity in rfc 2234: <<r = a b c \n ; comment>> the comment can attach to elements or be a separate rulelist_elt *)
 
 RULELIST -> 
+  RL_ELTS                               {{ x1 }}
+  | RL_ELTS WS_AND_COMMENTS             {{ x1 }}
+
+RL_ELTS -> 
   RULELIST_ELT                          {{ RULELIST[x1] }}
-  | RULELIST_ELT RULELIST               {{ match x2 with RULELIST(xs) -> RULELIST(x1 :: xs) }}
+  | RULELIST_ELT WS_AND_COMMENTS RL_ELTS  {{ match x3 with RULELIST(xs) -> RULELIST(x1 :: xs) }}
+
+WS_AND_COMMENTS -> 
+  ?eps? {{ x1 }}
+  | STAR_CWSP CNL {{ ss_concat [x1;x2] |> dest_Some }}
+  | STAR_CWSP CNL WS_AND_COMMENTS {{ ss_concat [x1;x2;x3] |> dest_Some }}
 
 RULELIST_ELT -> 
-  RULE STAR_CWSP CNL                    {{ RE_RULE(x1) }}
-  | PLUS_CNL                            {{ RE_CWSP_CNL(c x1) }} (* FIXME avoids ambiguity *)
+  RULE                                  {{ RE_RULE(x1) }}
 
 PLUS_CNL ->
   CNL {{ x1 }}
@@ -67,7 +75,7 @@ RULE -> RULENAME STAR_CWSP DEFINED_AS STAR_CWSP ELEMENTS {{ RULE(x1,x3,x5) }}
 
 RULENAME -> ?rulename?                  {{ RULENAME (c x1) }}
 
-DEFINED_AS -> EQUAL_OR_EQUAL_SLASH      {{ x2 }}
+DEFINED_AS -> EQUAL_OR_EQUAL_SLASH      {{ x1 }}
 
 EQUAL_OR_EQUAL_SLASH -> 
   "="                                   {{ DAS_EQUAL }}
@@ -120,8 +128,8 @@ CWSP ->
   | CNL ?wsp?                           {{ ss_concat [x1;x2] |> dest_Some }}
 
 STAR_CWSP -> 
-  ?eps?                                 {{ () }}
-  | CWSP STAR_CWSP                      {{ () }}
+  ?eps?                                 {{ x1 }}
+  | CWSP STAR_CWSP                      {{ ss_concat [x1;x2] |> dest_Some }}
 
 STAR_CWSP_CNL -> (* can start with ws *)
   CNL                                   {{ x1 }}

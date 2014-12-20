@@ -10,7 +10,7 @@ OCAMLDOC:=ocamlfind ocamldoc
 COMPFLAGS?:=# maybe set some additional compilation options
 
 SRC_DIR:=../src
-MLS_TO_EXEC:= grammar.ml eee.ml eee2.ml eee3_a1.ml eee3_a2.ml ocaml_p1.ml ocaml_p4.ml abnf_grammar.ml #
+MLS_TO_EXEC:= grammar.ml eee.ml eee2.ml eee3_a1.ml eee3_a2.ml ocaml_p1.ml ocaml_p4.ml abnf_grammar.ml abnf_grammar_2.ml #
 MLS:=$(shell ocamldep -sort *.ml *.mli)
 CMO:=$(MLS:.ml=.cmo)
 

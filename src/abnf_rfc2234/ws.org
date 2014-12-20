@@ -42,3 +42,18 @@
     - so `rn = a b c ; comm1 CRLF;comm2` must have comm2 as a separate
       rulelist_elt because it is not indented by ws
     - thus, a possible fix is to make the STAR_CWSP_CNL alternative be simply PLUS_CNL
+    - this means that you cannot have isolated comments with ws at the
+      beginning eg the following is not allowed:
+
+r = a b c ; comm
+; comm
+ ; comm
+
+     - the intuition is that a `;comm` starting at the beginning of
+       the line cannot attach to the rule (this is what rfc 2234
+       specifies); but then subsequent comments cannot be indented
+       (which is not enforced by rfc 2234)
+     - but this also precludes a line that has just ws
+     - it is not really clear why CWSP after a rule must parse a
+       newline followed by at least one ws; a better fix might be to
+       say that a rulelist_elt can be a rule, or star_CWSP_CNL
