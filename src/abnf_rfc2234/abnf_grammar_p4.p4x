@@ -1,5 +1,5 @@
 (* specification of abnf following rfc 2234 *)
-open P1_lib
+open P4_lib
 
 let ss_concat = P1_lib.ss_concat
 
@@ -10,7 +10,7 @@ let wsplus = (parse_RE "[ \n]+")
 
 let eps = a ""
 
-let eof = parse_EOF 
+let eof = parse_EOF ()
 
 let dest_Some x = (match x with
     | None -> (failwith "dest_Some: tu6")
@@ -47,6 +47,7 @@ let crlf = parse_RE "[\n]" (* FIXME really CR LF *)
 let vchar = parse_RE "[\x21-\x7E]"
 let wsp = parse_RE "[ \x09]"
 
+let parse_S = 
 <<g<<
 
 S -> ?ws? RULELIST ?ws? ?eof? {{ x2 |> sexp_of_rulelist |> Sexplib.Sexp.to_string_hum |> print_endline }}
@@ -155,6 +156,7 @@ HEX_VAL -> "x" ?one_star_hexdig? ?hex_val_rest? {{ ss_concat [x1;x2;x3] |> dest_
 
 PROSE_VAL -> "<" ?prose_val_chars? ">"  {{ x2 }}
 >>g>>
+!_S
 
 let main () = 
   let fname = Sys.argv.(1) in
