@@ -11,3 +11,9 @@
     - spaces, and spaces and tabs
     - with comments and newlines (CNL matches comments and newlines,
       and this is the only way newlines can be matched)
+  - the first step is to make explicit where the ws is
+  - STAR_CONCATENATION_REST
+    - can begin with ws, but not end and refers to itself
+    - CONCATENATION is REPETITION, possibly repeated and separated by ONE_STAR_CWSP
+  - STAR_ALTERNATION_REST
+    - ALTERNATION is CONCATNEATION possibly repeated and separated
