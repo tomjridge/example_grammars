@@ -27,7 +27,7 @@ and elements = ELEMENTS of alternation
 and defined_as = DAS_EQUAL | DAS_EQUAL_SLASH 
 and rulename = RULENAME of string 
 and rule = RULE of (rulename * defined_as * elements) 
-and rulelist_elt = RE_RULE of rule | RE_CWSP_CNL of string
+and rulelist_elt = RE_RULE of rule (* | RE_CWSP_CNL of string *)
 and rulelist = RULELIST of rulelist_elt list (* nonempty *) with sexp
 
 let rulename = parse_RE "[A-Za-z][-A-Za-z0-9]*"
