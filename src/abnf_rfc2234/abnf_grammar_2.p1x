@@ -60,16 +60,12 @@ RL_ELTS ->
   | RULELIST_ELT WS_AND_COMMENTS RL_ELTS  {{ match x3 with RULELIST(xs) -> RULELIST(x1 :: xs) }}
 
 WS_AND_COMMENTS -> 
-  ?eps? {{ x1 }}
-  | STAR_CWSP CNL {{ ss_concat [x1;x2] |> dest_Some }}
-  | STAR_CWSP CNL WS_AND_COMMENTS {{ ss_concat [x1;x2;x3] |> dest_Some }}
+  ?eps?                                 {{ x1 }}
+  | STAR_CWSP CNL                       {{ ss_concat [x1;x2] |> dest_Some }}
+  | STAR_CWSP CNL WS_AND_COMMENTS       {{ ss_concat [x1;x2;x3] |> dest_Some }}
 
 RULELIST_ELT -> 
   RULE                                  {{ RE_RULE(x1) }}
-
-PLUS_CNL ->
-  CNL {{ x1 }}
-  | CNL PLUS_CNL {{ ss_concat [x1;x2] |> dest_Some }}
 
 RULE -> RULENAME STAR_CWSP DEFINED_AS STAR_CWSP ELEMENTS {{ RULE(x1,x3,x5) }}
 

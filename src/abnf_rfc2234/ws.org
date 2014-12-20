@@ -57,3 +57,7 @@ r = a b c ; comm
      - it is not really clear why CWSP after a rule must parse a
        newline followed by at least one ws; a better fix might be to
        say that a rulelist_elt can be a rule, or star_CWSP_CNL
+  - an alternative fix to the current is to view a abnf file a a
+    sequence of rules, where each rule may have trailing comments and
+    whitespace; but the current approach have a rule not start or end
+    with ws, which is a useful invariant
