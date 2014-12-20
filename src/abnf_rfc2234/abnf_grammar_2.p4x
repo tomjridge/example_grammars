@@ -10,7 +10,7 @@ let wsplus = (parse_RE "[ \n]+")
 
 let eps = a ""
 
-let eof = parse_EOF
+let eof = parse_EOF 
 
 let dest_Some x = (match x with
     | None -> (failwith "dest_Some: tu6")

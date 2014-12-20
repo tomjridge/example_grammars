@@ -11,7 +11,7 @@ COMPFLAGS?:=# maybe set some additional compilation options
 
 SRC_DIR:=../src
 MLS_TO_EXEC:= grammar.ml eee.ml eee2.ml eee3_a1.ml eee3_a2.ml ocaml_p1.ml ocaml_p4.ml abnf_grammar.ml abnf_grammar_2.ml #
-MLS:=$(shell ocamldep -sort *.ml *.mli)
+MLS:=$(cat depend)
 CMO:=$(MLS:.ml=.cmo)
 
 P1_GEN:=../src_ext/p1/build/p1_gen.native
@@ -36,10 +36,13 @@ default: all
 
 before_all:
 	make link 
+	make depend
 
 link: $(SRC_DIR)
 	find $(SRC_DIR) -maxdepth 2 -type f -exec ln -sf \{\} . \;
 
+depend:
+	$(CAMLDEP) -sort *.ml *.mli >depend # costly
 
 all: ../src_ext/p1/build/p1.cma ../src_ext/e3/build/e3.cma ../src_ext/p4/build/p4.cma before_all 
 	make grammar.native 
