@@ -1,0 +1,13 @@
+
+  - processing of ws and comments in abnf_grammar is not clear, and certainly ambiguous
+  - some items such as DEFINED_AS can start with ws
+  - a lot of elements can end with ws even if they are not wsp-type symbols eg rule
+  - comments within a rule should attach to the rule itself, but
+    comments after are, according to the grammar, partly attached to
+    elements and partly attached to cnl in the rule production
+  - effectively, the goal seems to be to allow comments in reasonable
+    places, but not really bother about where they are attached
+  - we can distinguish 3 types of wsp:
+    - spaces, and spaces and tabs
+    - with comments and newlines (CNL matches comments and newlines,
+      and this is the only way newlines can be matched)
