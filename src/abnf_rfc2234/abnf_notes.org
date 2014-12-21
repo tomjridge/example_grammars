@@ -76,3 +76,14 @@ r = a b c ; comm
     - n*m is presumably a bit like itern; can be iter n >- (0*(m-n))
   - grouping
     - want to allow anonymous parsers in rhs; can we do this already?
+
+--
+
+  - for code generation, we need to decide what the "actions" should do
+  - simplest is to produce a tree, where nodes are labelled as the
+    nonterminal, and children can substrings (representing parsed
+    terminals), or nodes (for nonterminals); for grouping, we need to
+    do something different; perhaps the easiest is just to produce
+    sexps? (or polymorphic variant trees)
+  - if we assume every action produces an sexp, then processing should
+    be fairly straight forward

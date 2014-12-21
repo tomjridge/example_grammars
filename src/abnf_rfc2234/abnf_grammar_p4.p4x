@@ -21,7 +21,7 @@ open Sexplib.Std
 type ty_option = OPTION of alternation 
 and group = GROUP of alternation 
 and element = EL_RULENAME of rulename | EL_GROUP of group | EL_OPTION of ty_option | EL_CHAR_VAL (* FIXME *) | EL_NUM_VAL | EL_PROSE_VAL 
-and repeat = REPEAT (* FIXME *) 
+and repeat = REPEAT of int option * int option
 and repetition = REP of (repeat option * element) 
 and concatenation = CONCATENATION of repetition list 
 and alternation = ALTERNATION of concatenation list 
@@ -33,7 +33,6 @@ and rulelist_elt = RE_RULE of rule (* | RE_CWSP_CNL of string *)
 and rulelist = RULELIST of rulelist_elt list (* nonempty *) with sexp
 
 let rulename = parse_RE "[A-Za-z][-A-Za-z0-9]*"
-let repeat = parse_RE "[0-9]*[*][0-9]*\\|[0-9]+"
 let dquote = a "\""
 let char_vals = parse_RE "[^\"]*"
 let one_star_bit = parse_RE "[01]+"
@@ -46,6 +45,7 @@ let prose_val_chars = parse_RE "[^>]*"
 let crlf = parse_RE "[\n]" (* FIXME really CR LF *)
 let vchar = parse_RE "[\x21-\x7E]"
 let wsp = parse_RE "[ \x09]"
+let num = parse_RE "[0-9]+"
 
 let parse_S = 
 <<g<<
@@ -89,7 +89,12 @@ REPETITION ->
   ELEMENT                               {{ REP(None,x1) }}
   | REPEAT ELEMENT                      {{ REP(Some(x1),x2) }}
 
-REPEAT -> ?repeat?                      {{ REPEAT }}
+REPEAT -> 
+  ?num?                                 {{ let x = c x1 |> int_of_string in REPEAT(Some x,Some x) }}
+  | "*"                                 {{ REPEAT(None,None) }}
+  | ?num? "*"                           {{ let x = c x1 |> int_of_string in REPEAT(Some x,None) }}
+  | "*" ?num?                           {{ let x = c x2 |> int_of_string in REPEAT(None,Some x) }}
+  | ?num? "*" ?num?                     {{ REPEAT(Some(c x1|>int_of_string),Some(c x3|>int_of_string)) }}
 
 ELEMENT ->
   RULENAME                              {{ EL_RULENAME x1 }}
