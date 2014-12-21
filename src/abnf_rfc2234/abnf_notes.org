@@ -61,3 +61,18 @@ r = a b c ; comm
     sequence of rules, where each rule may have trailing comments and
     whitespace; but the current approach have a rule not start or end
     with ws, which is a useful invariant
+
+--
+
+  - adding p4 combinators for abnf constructs; main difficulties
+    - grouping
+    - various forms of repetition
+  - repetition
+    - a bit like itern and star
+    - for simplicity of impl, may distinguish cases n*m, `*m`, `n*` and *
+    - n* is just itern >- star
+    - *m is 0*m
+    - 0*m is worth implementing separately
+    - n*m is presumably a bit like itern; can be iter n >- (0*(m-n))
+  - grouping
+    - want to allow anonymous parsers in rhs; can we do this already?
