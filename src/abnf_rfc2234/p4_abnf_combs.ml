@@ -92,3 +92,23 @@ let _ = assert([[1;1;1]] = run_parser_string p "111")
 let _ = assert([[1;1;1;1;1]] = run_parser_string p "11111")
 let _ = assert([] = run_parser_string p "111111")
 let _ = assert([] = run_parser_string p "11")
+
+
+(* grouping *)
+
+let parse_2 = (a "2") >>> (fun _ -> 2)
+
+let p = (
+  let alts = lazy(alts[
+      ((rhs parse_1) >- (
+          (* the following might arise from a nested group *)
+          let alts = lazy(alts[
+              ((rhs parse_1) >- parse_2 >- parse_2 >- parse_1) >> (fun _ -> ())])
+          in
+          mkntparser_lazy (mk_pre_parser()) alts)
+       >- parse_1) >> (fun _ -> ());     
+    ])
+  in
+  mkntparser_lazy (mk_pre_parser()) alts)
+
+let _ = run_parser_string p "112211" 
