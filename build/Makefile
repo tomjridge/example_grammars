@@ -10,9 +10,9 @@ OCAMLDOC:=ocamlfind ocamldoc
 COMPFLAGS?:=# maybe set some additional compilation options
 
 SRC_DIR:=../src
-MLS_TO_EXEC:= grammar.ml eee.ml eee2.ml eee3_a1.ml eee3_a2.ml ocaml_p1.ml ocaml_p4.ml abnf_grammar.ml abnf_grammar_2.ml abnf_grammar_main.ml #
+MLS_TO_EXEC:= eee.ml eee2.ml eee3_a1.ml eee3_a2.ml ocaml_p1.ml ocaml_p4.ml abnf_grammar.ml abnf_grammar_2.ml abnf_grammar_main.ml #
 MLS_FOR_LIB:=abnf_grammar_p4.ml
-MLS:=$(cat depend)
+MLS:=$(shell cat depend)
 CMO:=$(MLS:.ml=.cmo)
 LIB:=example_grammars
 
@@ -98,11 +98,13 @@ cmx: $(MLS)
 	touch cmx
 
 $(LIB).cmxa: cmx
-	$(CAMLOPT) $(COMPFLAGS) -a -o $@ $(MLS_FOR_LIB:.ml=.cmx)
+	ocamlfind ocamlopt -a -o $@ $(MLS_FOR_LIB:.ml=.cmx)
 
+grammar.native: grammar.ml
+	$(CAMLOPT) $(COMPFLAGS) $(CAMLOPTINCLUDES) -o $@ $<
 
 $(MLS_TO_EXEC:.ml=.native): %.native: %.ml $(LIB).cmxa
-	$(CAMLOPT) $(COMPFLAGS) $(CAMLOPTINCLUDES) -o $@ $(LIB).cmxa $<
+	$(CAMLOPT) $(COMPFLAGS) $(CAMLOPTINCLUDES) $(LIB).cmxa -o $@ $<
 
 
 
@@ -132,7 +134,8 @@ $(MLS_TO_EXEC:.ml=.native): %.native: %.ml $(LIB).cmxa
 .PRECIOUS: %.p1 %.ml %.p4
 
 clean:
-	rm -f $(GS:.p1=.ml) *.cppo *.p4 *.p4x *.p1x *.p1 *.txt *.lem
+	rm -f $(GS:.p1=.ml) *.cppo *.p4 *.p4x *.p1x *.p1 *.txt *.lem *.p1x.*
+	rm -f cmx
 	rm -f $(GS)
 	rm -f *.ml *.mli *.cmo *.cmi *.cmx *.native *.a *.o *.cma *.cmxa .depend depend cmo
 	rm -f *.org 
