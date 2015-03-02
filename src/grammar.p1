@@ -210,7 +210,7 @@ let main () =
   |>> (fun (txt,args) -> 
       let rs = run_parser_string parse_S txt in
       match rs with
-      | [(r,_)] -> OK(r,args)
+      | [r] -> OK(r,args)
       | [] -> (Error (command^": failed to parse grammar file: "^args.file))
       | _ -> (Error (command^": failed to parse grammar file unambiguously: "^args.file)))
   |>> (fun (r,args) -> 

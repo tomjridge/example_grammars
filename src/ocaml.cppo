@@ -387,13 +387,6 @@ let main () =
       | None -> Error (command^": couldn't read file: "^fname))
   |>> (fun (txt,fname) -> 
       let rs =run_parser_string parse_S txt in
-      let rs =
-#ifdef P4
-        rs
-#else
-        rs |> List.map fst
-#endif
-      in
       match rs with
       | [(r)] -> OK(r)
       | [] -> (Error (command^": failed to parse file: "^fname))
