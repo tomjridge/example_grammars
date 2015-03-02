@@ -10,8 +10,8 @@ OCAMLDOC:=ocamlfind ocamldoc
 COMPFLAGS?:=# maybe set some additional compilation options
 
 SRC_DIR:=../src
-MLS_TO_EXEC:= eee.ml eee2.ml eee3_a1.ml eee3_a2.ml ocaml_p1.ml ocaml_p4.ml abnf_grammar.ml abnf_grammar_2.ml abnf_grammar_main.ml #
-MLS_FOR_LIB:=abnf_grammar_p4.ml
+MLS_TO_EXEC:= eee.ml eee2.ml eee3_a1.ml eee3_a2.ml ocaml_main_p1.ml ocaml_main_p4.ml abnf_grammar.ml abnf_grammar_2.ml abnf_grammar_main.ml #
+MLS_FOR_LIB:=abnf_grammar_p4.ml ocaml_p1.ml ocaml_p4.ml
 MLS:=$(shell cat depend)
 CMO:=$(MLS:.ml=.cmo)
 LIB:=example_grammars
@@ -72,8 +72,8 @@ tmp:
 	make abnf_grammar_main.native
 
 test:
-	./ocaml_p1.native os_command.lem
-	./ocaml_p4.native os_command.lem
+	./ocaml_main_p1.native os_command.lem
+	./ocaml_main_p4.native os_command.lem
 
 
 ocaml_p1.p1x: ocaml.cppo
@@ -82,6 +82,11 @@ ocaml_p1.p1x: ocaml.cppo
 ocaml_p4.p4x: ocaml.cppo
 	$(CPPO) -D P4 ocaml.cppo >$@
 
+ocaml_main_p1.ml: ocaml_main.cppo
+	$(CPPO) $< >$@
+
+ocaml_main_p4.ml: ocaml_main.cppo
+	$(CPPO) -D P4 $< >$@
 
 eee3_a1.p1: eee3.p1x.acts grammar.native
 	rm -f $@

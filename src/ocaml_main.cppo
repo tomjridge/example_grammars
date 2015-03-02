@@ -1,0 +1,38 @@
+#ifdef P4 
+open Ocaml_p4
+open P4_lib
+#else
+open Ocaml_p1
+open P1_lib
+#endif
+
+
+type 'a or_error = OK of 'a | Error of string
+
+let ( |>> ) x f = (match x with
+    | OK x -> f x
+    | Error y -> Error y)
+
+let main () = 
+  let command = "ocaml_main" in
+  (try OK(Sys.argv.(1)) with _ -> Error (command^": require a file as argument"))
+  |>> (fun fname ->
+      match read_file_as_string fname with 
+      | Some x -> OK (x,fname) 
+      | None -> Error (command^": couldn't read file: "^fname))
+  |>> (fun (txt,fname) -> 
+      let rs =run_parser_string parse_S txt in
+      match rs with
+      | [(r)] -> OK(r)
+      | [] -> (Error (command^": failed to parse file: "^fname))
+      | r1::r2::_ -> (Error (String.concat "\n" [
+          command^": failed to parse file unambiguously: "^fname;
+          r1;
+          r2
+        ])))
+  |>> (fun r -> print_string r; OK ())
+  |> (function
+      | Error s -> print_string s; failwith s
+      | OK () -> ())
+
+let _ = main ()
