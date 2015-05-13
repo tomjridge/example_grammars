@@ -2,10 +2,31 @@
 
 Example grammars for p1, p3, p4
 
-Checkout dev branches of p1 e3 and p4 into the same directory.
+## checkout
 
-Checkout example_grammars (this repo) into the same directory.
+  * Checkout dev branches of p1 e3 and p4 into the same directory.
 
-Install nix
+  * Checkout example_grammars (this repo) into the same directory.
 
-Build with `nix-build` in this directory
+The following should work:
+
+```
+git clone -b dev https://github.com/tomjridge/e3.git
+git clone -b dev https://github.com/tomjridge/p1.git
+git clone -b dev https://github.com/tomjridge/p4.git
+git clone https://github.com/tomjridge/example_grammars.git
+```
+
+
+## build
+
+
+Execute the following commands (taken from `local/test_release.sh`):
+
+```
+  (cd p1 && make && make install)
+  (cd e3 && make && make install)
+  export PATH=$PWD/p1/build:$PATH  # $PWD should be absolute path
+  (cd p4 && make && make install)
+  cd example_grammars && make
+```
