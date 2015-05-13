@@ -1,0 +1,5 @@
+E3_PKG:=-I ../../e3/build e3.cma # local development; comment when releasing; check via nix-build
+P1_PKG:=-I ../../p1/build p1.cma
+P4_PKG:=-I ../../p4/build p4.cma
+P1_GEN:=../../p1/build/p1_gen.native
+P1_GEN_P4:=../../p1/build/p1_gen_p4.native # local development

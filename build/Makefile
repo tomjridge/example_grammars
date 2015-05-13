@@ -1,5 +1,7 @@
 SHELL:=bash
 
+include ../Makefile.common
+
 CAMLC:=ocamlfind ocamlc -linkpkg -package sexplib,sexplib.syntax -syntax camlp4o
 CAMLOPT:=ocamlfind ocamlopt -linkpkg -package sexplib,sexplib.syntax -syntax camlp4o
 CAMLDEP:=ocamlfind ocamldep -package sexplib,sexplib.syntax -syntax camlp4o -one-line
@@ -16,10 +18,8 @@ MLS:=$(shell cat depend)
 CMO:=$(MLS:.ml=.cmo)
 LIB:=example_grammars
 
-P1_GEN:=../src_ext/p1/build/p1_gen.native
-P1_GEN_P4:=../src_ext/p1/build/p1_gen_p4.native
 
-CAMLCINCLUDES:=str.cma -I ../src_ext/p1/build p1.cma -I ../src_ext/e3/build e3.cma -I ../src_ext/p4/build p4.cma
+CAMLCINCLUDES:=-package str $(P1_PKG) $(E3_PKG) $(P4_PKG)
 CAMLOPTINCLUDES:=$(CAMLCINCLUDES:.cma=.cmxa)
 
 # FIXME probably want to look at warning 8 a bit more closely
@@ -30,11 +30,6 @@ COMPFLAGS:=$(WARNINGS)
 CPPO:=cppo -n
 
 default: all
-
-../src_ext/p1/build/p1.cma ../src_ext/e3/build/e3.cma ../src_ext/p4/build/p4.cma:
-	cd ../src_ext/p1/build && make
-	cd ../src_ext/e3/build && make
-	cd ../src_ext/p4/build && make
 
 before_all:
 	make link 
@@ -49,7 +44,7 @@ link: $(SRC_DIR)
 depend:
 	$(CAMLDEP) -sort *.ml *.mli >depend # costly
 
-all: ../src_ext/p1/build/p1.cma ../src_ext/e3/build/e3.cma ../src_ext/p4/build/p4.cma before_all 
+all: before_all 
 	make $(MLS_TO_EXEC:.ml=.native)
 
 # want to build all ml files prior to generating dependency info; need
@@ -109,7 +104,7 @@ grammar.native: grammar.ml
 	$(CAMLOPT) $(COMPFLAGS) $(CAMLOPTINCLUDES) -o $@ $<
 
 $(MLS_TO_EXEC:.ml=.native): %.native: %.ml $(LIB).cmxa
-	$(CAMLOPT) $(COMPFLAGS) $(CAMLOPTINCLUDES) $(LIB).cmxa -o $@ $<
+	$(CAMLOPT) $(COMPFLAGS) $(CAMLOPTINCLUDES) $(LIB).cmxa -linkpkg -o $@ $<
 
 
 
