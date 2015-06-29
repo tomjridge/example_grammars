@@ -1,3 +1,5 @@
+#!/bin/bash
+
 function checkout {
   git clone -b dev https://github.com/tomjridge/e3.git
   git clone -b dev https://github.com/tomjridge/p1.git
