@@ -46,14 +46,14 @@ let re re' = (
     then Tjr_string.split_at s (List.hd xs) |> fun (s1,s2) -> Some(s1,s2)
     else None) [@@warning "-w-40"]
 
-let try_ p s = 
+let opt p s = 
   p s |> function
   | None -> Some(None,s) 
   | Some(x,s) -> Some(Some x,s)
 
 let rec plus ~sep p = 
   p |>> fun x ->
-  (try_ (sep -- plus ~sep p)) |>> function
+  (opt (sep -- plus ~sep p)) |>> function
   | None -> return [x]
   | Some (_,xs) -> return (x::xs)
 
@@ -63,20 +63,20 @@ let restore s' s = Some((),s')
 
 (* a bit fiddly! *)
 let star ~sep p =
-  try_ p |>> function
+  opt p |>> function
   | None -> return []
   | Some x -> 
     save |>> fun state ->
-    try_ sep |>> function
+    opt sep |>> function
     | None -> restore state |>> fun _ -> return [x]
     | _ -> 
-      try_ (plus ~sep p) |>> function
+      opt (plus ~sep p) |>> function
       | None -> restore state |>> fun _ -> return [x]
       | Some xs -> return (x::xs)
 
 (* shortcut alternative *)
 let alt a b = 
-  try_ a |>> function
+  opt a |>> function
   | None -> b
   | Some x -> return x
 
@@ -84,23 +84,16 @@ let ( || ) = alt
 
 let discard p = p |>> fun _ -> return ()
 
-let _0 = return ()
-
-let ( --- ) a b = (a -- b) |>> fun _ -> _0
+let ( --- ) a b = discard (a -- b) 
            
 let _Some x = Some x
-let opt x = try_ x 
-let _ = opt
 
 (* grammar of grammars ---------------------------------------------- *)
 
 let comm = a "(*" -- upto_a "*)" -- a "*)"  (* FIXME nested comments *)
 let rec ws s = 
-  s |> (* 0 or more *) (* re is longest match *)
-  (re "[ \n]*") --- 
-  (try_ comm |>> function
-    | None -> _0
-    | Some _ -> ws |>> fun _ -> _0)
+  (* 0 or more *) (* re is longest match *)
+  (re "[ \n]*") --- (opt (comm --- ws)) @@ s
 let nt = re "[A-Z]+" 
 let tm = 
   let sq = "'" in
@@ -126,13 +119,15 @@ let grammar = ws -- rules -- ws |>> fun ((_,x2),_) -> return x2
 
 (* example ---------------------------------------------------------- *)
 
-let example = {|?w?|}
+module X_ = functor(_:sig end) -> struct
 
-let _ = tm example
+  let example = {|?w?|}
 
-let _ = example |> a "?" -- re"[a-z]+"
+  let _ = tm example
 
-let example = {|
+  let _ = example |> a "?" -- re"[a-z]+"
+
+  let example = {|
 
 (* the expressions we want to parse at top-level *)
 S -> ?w? DEFN ?w? ?eof?
@@ -141,8 +136,9 @@ S -> ?w? DEFN ?w? ?eof?
 
 |}
 
-let _ = grammar example
+  let _ = grammar example
 
+end
 
 (* ocaml grammar ---------------------------------------------------- *)
 
@@ -431,8 +427,8 @@ $ time ./a.out
 Parsing grammar...
 finished!
 
-real	0m0.010s
-user	0m0.000s
+real	0m0.008s
+user	0m0.004s
 sys	0m0.004s
 
 *)
