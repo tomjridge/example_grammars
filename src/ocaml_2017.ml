@@ -2,98 +2,13 @@
 
 (* worth working with indexes rather than strings? *)
 
-let (starts_with,drop) = Tjr_string.(starts_with,drop)
-
-let upto_a lit = Tjr_substring.upto_re ~re:Str.(regexp_string lit)
-
-(* naive monadic parsing -------------------------------------------- *)
-
-(* experiment with monadic parsing; 'a m takes a string and returns an
-   'a * string or an error/noparse indication *)
-
-type 'a m = string -> ('a * string) option
-
-let bind (f:'a -> 'b m) (x:'a m) :'b m = 
-  fun s -> x s |> function | None -> None | Some (v,s) -> f v s
-let ( |>> ) x f = x |> bind f
-
-let return x s = Some(x,s)
-
-let then_ a b = a |>> fun x -> b |>> fun y -> return (x,y)
-let ( -- ) = then_
-
-(* FIXME improve this by using the result of the parse subsequently *)
-(* let can x s = Some (x s <> None,s) *)
-
-let a lit s = 
-  if starts_with ~prefix:lit s 
-  then drop (String.length lit) s |> fun s' -> Some(lit,s') 
-  else None
-
-let upto_a lit = ( 
-  let p = upto_a lit in
-  fun s -> 
-    p {s_=s;i_=0} |> fun xs ->
-    if xs <> [] 
-    then Tjr_string.split_at s (List.hd xs) |> fun (s1,s2) -> Some(s1,s2)
-    else None) [@@warning "-w-40"]
-
-let re re' = (
-  let re' = Str.regexp re' in
-  fun s ->
-    Tjr_substring.(re ~re:re' {s_=s;i_=0}) |> fun xs ->
-    if xs <> []
-    then Tjr_string.split_at s (List.hd xs) |> fun (s1,s2) -> Some(s1,s2)
-    else None) [@@warning "-w-40"]
-
-let opt p s = 
-  p s |> function
-  | None -> Some(None,s) 
-  | Some(x,s) -> Some(Some x,s)
-
-let rec plus ~sep p = 
-  p |>> fun x ->
-  (opt (sep -- plus ~sep p)) |>> function
-  | None -> return [x]
-  | Some (_,xs) -> return (x::xs)
-
-let save s = Some(s,s)
-
-let restore s' s = Some((),s')
-
-(* a bit fiddly! *)
-let star ~sep p =
-  opt p |>> function
-  | None -> return []
-  | Some x -> 
-    save |>> fun state ->
-    opt sep |>> function
-    | None -> restore state |>> fun _ -> return [x]
-    | _ -> 
-      opt (plus ~sep p) |>> function
-      | None -> restore state |>> fun _ -> return [x]
-      | Some xs -> return (x::xs)
-
-(* shortcut alternative *)
-let alt a b = 
-  opt a |>> function
-  | None -> b
-  | Some x -> return x
-
-let ( || ) = alt       
-
-let discard p = p |>> fun _ -> return ()
-
-let ( --- ) a b = discard (a -- b) 
-           
-let _Some x = Some x
+open P0
 
 (* grammar of grammars ---------------------------------------------- *)
 
 let comm = a "(*" -- upto_a "*)" -- a "*)"  (* FIXME nested comments *)
-let rec ws s = 
-  (* 0 or more *) (* re is longest match *)
-  (re "[ \n]*") --- (opt (comm --- ws)) @@ s
+(* ws: 0 or more; re is hopefully longest match (not true for Str) *)
+let rec ws s = (re "[ \n]*") --- (opt (comm --- ws)) @@ s
 let nt = re "[A-Z]+" 
 let tm = 
   let sq = "'" in
@@ -103,7 +18,7 @@ let tm =
   (a dq -- upto_a dq -- a dq) 
 let sym = 
   (nt |>> fun x -> return (`NT x)) || 
-  (tm |>> fun x -> return (`TM x))
+  (tm |>> fun x -> return (`TM (_3 x)))
 let var_eq = 
   let v = re "[a-z][a-z0-9]*" in
   let v_eq = v -- a"=" in
@@ -112,9 +27,10 @@ let syms = plus ~sep:ws var_eq
 let bar = ws -- a "|" -- ws 
 let rhs = plus ~sep:bar syms  (* plus and star are greedy *)
 let rule = 
-  sym -- (ws -- a "->" -- ws) -- rhs |>> fun ((sym,_),rhs) -> return (sym,rhs)
+  sym -- (ws -- a "->" -- ws) -- rhs |>> fun x -> 
+  _3 x |> fun (sym,_,rhs) -> return (sym,rhs)
 let rules = star ~sep:(ws -- a";" -- ws) rule 
-let grammar = ws -- rules -- ws |>> fun ((_,x2),_) -> return x2 
+let grammar = ws -- rules -- ws |>> fun x -> _3 x |> fun (_,x2,_) -> return x2
 
 
 (* example ---------------------------------------------------------- *)
@@ -413,22 +329,22 @@ FIELDDECL -> s1=FIELDNAME w1=?w? ":" w2=?w? s2=POLYTYPEXPR
 
 |}
 
-let _ = print_endline "Parsing grammar..."
+let _ = print_endline "Parsing grammar (x100)..."
 
-let g' = grammar g 
+let g' = for i = 1 to 100 do ignore(grammar g) done
 
-(* let _ = g' |> function Some x -> x | None -> failwith __LOC__ *)
+let _ = grammar g |> function Some x -> x | None -> failwith __LOC__ 
 
 let _ = print_endline "finished!"
 
 (*
 
 $ time ./a.out
-Parsing grammar...
+Parsing grammar (x100)...
 finished!
 
-real	0m0.008s
-user	0m0.004s
-sys	0m0.004s
+real	0m0.228s
+user	0m0.212s
+sys	0m0.016s
 
 *)
