@@ -44,7 +44,9 @@ let star ~sep p =
 
 (* shortcut alternative *)
 let ( || ) a b = can a |> bind @@ fun x -> if x then a else b
-                   
+                  
+let ( |>> ) x f = x |> bind f
+ 
 let f ~a ~upto_a ~return ~re ~plus ~star ~can = 
   let ( -- ) a b = failwith __LOC__ in
   let ( || ) a b = failwith __LOC__ in
@@ -64,8 +66,13 @@ let f ~a ~upto_a ~return ~re ~plus ~star ~can =
   let sym = nt || tm (* should return a string *) in
   let bar = ws -- a "|" -- ws in
   let rhs = plus ~sep:bar sym in (* plus and star are greedy *)
-  let rule = sym -- ws -- a "->" -- ws -- rhs in
-  let rules = star ~sep:(ws -- a";" -- ws) in
+  let rule = 
+    sym |>> fun sym ->
+    (ws -- a "->" -- ws) |>> fun _ -> 
+    rhs |>> fun rhs -> 
+    failwith __LOC__ (* return (sym,rhs)  *)
+  in
+  let rules = star ~sep:(ws -- a";" -- ws) rule in
   rule,rules
     
 
