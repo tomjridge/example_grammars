@@ -1,5 +1,11 @@
 (* a cleaned up version suitable for the newly-revamped p1 2017-07-01 *)
 
+(* FIXME following is very slow - anything obvious? or need to work
+   with indexes? *)
+
+
+(* naive monadic parsing -------------------------------------------- *)
+
 (* experiment with monadic parsing; 'a m takes a string and returns an
    'a * string or an error/noparse indication *)
 
@@ -7,75 +13,102 @@ type 'a m = string -> ('a * string) option
 
 let bind (f:'a -> 'b m) (x:'a m) :'b m = 
   fun s -> x s |> function | None -> None | Some (v,s) -> f v s
+let ( |>> ) x f = x |> bind f
 
 let return x s = Some(x,s)
 
-let then_ a b = a |> bind @@ fun x -> b |> bind @@ fun y -> return (x,y)
+let then_ a b = a |>> fun x -> b |>> fun y -> return (x,y)
 let ( -- ) = then_
 
+(* FIXME improve this by using the result of the parse subsequently *)
 let can x s = Some (x s <> None,s)
 
 let a lit s = 
   if Tjr_string.starts_with ~prefix:lit s 
-  then String.sub s 0 (String.length lit) |> fun s' -> Some(lit,s') 
+  then Tjr_string.drop (String.length lit) s |> fun s' -> Some(lit,s') 
   else None
 
-let upto_a lit s =
+let upto_a lit s = (
   Tjr_substring.(upto_a lit {s_=s;i_=0}) |> fun xs ->
   if xs <> [] 
   then Tjr_string.split_at s (List.hd xs) |> fun (s1,s2) -> Some(s1,s2)
-  else None
+  else None) [@@warning "-w-40"]
 
-let re s = 
-  Tjr_substring.(re ~re:(Str.regexp s) {s_=s;i_=0}) |> fun xs ->
+let re re' s = (
+  Tjr_substring.(re ~re:(Str.regexp re') {s_=s;i_=0}) |> fun xs ->
   if xs <> []
   then Tjr_string.split_at s (List.hd xs) |> fun (s1,s2) -> Some(s1,s2)
-  else None
+  else None) [@@warning "-w-40"]
 
 let rec plus ~sep p = 
-  p |> bind @@ fun x ->
-  can (sep -- p) |> bind @@ fun more ->
-  if more then plus ~sep p |> bind @@ fun xs -> return (x::xs)
+  p |>> fun x ->
+  can (sep -- p) |>> fun more ->
+  if more then sep -- plus ~sep p |>> fun (_,xs) -> return (x::xs)
   else return [x]
 
 let star ~sep p =
-  can p |> bind @@ fun at_least_one ->
+  can p |>> fun at_least_one ->
   if at_least_one then plus ~sep p else return []
 
 (* shortcut alternative *)
-let ( || ) a b = can a |> bind @@ fun x -> if x then a else b
-                  
-let ( |>> ) x f = x |> bind f
- 
-let f ~a ~upto_a ~return ~re ~plus ~star ~can = 
-  let ( -- ) a b = failwith __LOC__ in
-  let ( || ) a b = failwith __LOC__ in
-  let comm = "(*" -- upto_a "*)" -- a "*)" in  (* FIXME nested comments *)
-  let rec ws = (* 0 or more *)
-    re "[ \n]*" --  (* re is longest match *)
-    if can comm then comm -- ws  else return ()
-  in
-  let nt = re "[A-Z]+" in
-  let tm = 
-    let sq = "'" in
-    let dq = "\"" in
-    (a"?" -- re"[a-z]+" -- a"?") || 
-    (a sq -- upto_a sq -- a sq) ||
-    (a dq -- upto_a dq -- a dq) 
-  in
-  let sym = nt || tm (* should return a string *) in
-  let bar = ws -- a "|" -- ws in
-  let rhs = plus ~sep:bar sym in (* plus and star are greedy *)
-  let rule = 
-    sym |>> fun sym ->
-    (ws -- a "->" -- ws) |>> fun _ -> 
-    rhs |>> fun rhs -> 
-    failwith __LOC__ (* return (sym,rhs)  *)
-  in
-  let rules = star ~sep:(ws -- a";" -- ws) rule in
-  rule,rules
-    
+let alt a b = can a |>> fun x -> if x then a else b
+let ( || ) = alt       
 
+let discard p = p |>> fun _ -> return ()
+
+let _0 = return ()
+
+let ( --- ) a b = (a -- b) |>> fun _ -> _0
+           
+let _Some x = Some x
+let opt x = can x |>> fun b -> if b then x |>> fun y -> return (Some y) else return None
+let _ = opt
+
+(* grammar of grammars ---------------------------------------------- *)
+
+let comm = a "(*" -- upto_a "*)" -- a "*)"  (* FIXME nested comments *)
+let rec ws s = 
+  s |> (* 0 or more *) (* re is longest match *)
+  (re "[ \n]*") --- 
+  (can comm |>> fun c -> if c then comm --- ws else _0)
+let nt = re "[A-Z]+" 
+let tm = 
+  let sq = "'" in
+  let dq = "\"" in
+  (a"?" -- re"[a-z_][a-zA-Z0-9]*" -- a"?") || 
+  (a sq -- upto_a sq -- a sq) ||
+  (a dq -- upto_a dq -- a dq) 
+let sym = 
+  (nt |>> fun x -> return (`NT x)) || 
+  (tm |>> fun x -> return (`TM x))
+let var_eq = 
+  let v = re "[a-z][a-z0-9]*" in
+  let v_eq = v -- a"=" in
+  opt v_eq -- sym |>> fun (v,s) -> return (v,s)
+let syms = plus ~sep:ws var_eq
+let bar = ws -- a "|" -- ws 
+let rhs = plus ~sep:bar syms  (* plus and star are greedy *)
+let rule = 
+  sym -- (ws -- a "->" -- ws) -- rhs |>> fun ((sym,_),rhs) -> return (sym,rhs)
+let rules = star ~sep:(ws -- a";" -- ws) rule 
+let grammar = ws -- rules -- ws |>> fun ((_,x2),_) -> return x2 
+
+
+(* example ---------------------------------------------------------- *)
+
+let example = {|
+
+(* the expressions we want to parse at top-level *)
+S -> ?w? DEFN ?w? ?eof?
+| ?w? TYPEDEFINITIONS ?w? ?eof?
+| ?w? TYPEXPR ?w? ?eof?
+
+|}
+
+let _ = grammar example
+
+
+(* ocaml grammar ---------------------------------------------------- *)
 
 let g = {|
 
@@ -347,3 +380,9 @@ FIELDDECLSA -> FIELDDECL
 FIELDDECL -> s1=FIELDNAME w1=?w? ":" w2=?w? s2=POLYTYPEXPR 
 
 |}
+
+let _ = print_endline "Parsing grammar..."
+
+let g' = grammar g
+
+let _ = print_endline "finished!"
