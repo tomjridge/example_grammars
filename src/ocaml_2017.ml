@@ -1,8 +1,25 @@
 (* a cleaned up version suitable for the newly-revamped p1 2017-07-01 *)
 
-(* FIXME following is very slow - anything obvious? or need to work
-   with indexes? *)
+(* worth working with indexes rather than strings? *)
 
+let starts_with ~prefix b =
+  let len = String.length prefix in
+  len > String.length b |> function 
+  | true -> false
+  | false -> 
+    let rec f j = 
+      if j >= len then true else
+      prefix.[j] = b.[j] &&
+      f (j+1)
+    in
+    f 0
+
+let drop n s =
+  String.length s |> fun l ->
+  if n >= l then "" else
+    String.sub s n (l-n)
+
+let upto_a lit = Tjr_substring.upto_re ~re:Str.(regexp_string lit)
 
 (* naive monadic parsing -------------------------------------------- *)
 
@@ -21,37 +38,63 @@ let then_ a b = a |>> fun x -> b |>> fun y -> return (x,y)
 let ( -- ) = then_
 
 (* FIXME improve this by using the result of the parse subsequently *)
-let can x s = Some (x s <> None,s)
+(* let can x s = Some (x s <> None,s) *)
 
 let a lit s = 
-  if Tjr_string.starts_with ~prefix:lit s 
-  then Tjr_string.drop (String.length lit) s |> fun s' -> Some(lit,s') 
+  if starts_with ~prefix:lit s 
+  then drop (String.length lit) s |> fun s' -> Some(lit,s') 
   else None
 
-let upto_a lit s = (
-  Tjr_substring.(upto_a lit {s_=s;i_=0}) |> fun xs ->
-  if xs <> [] 
-  then Tjr_string.split_at s (List.hd xs) |> fun (s1,s2) -> Some(s1,s2)
-  else None) [@@warning "-w-40"]
+let upto_a lit = ( 
+  let p = upto_a lit in
+  fun s -> 
+    p {s_=s;i_=0} |> fun xs ->
+    if xs <> [] 
+    then Tjr_string.split_at s (List.hd xs) |> fun (s1,s2) -> Some(s1,s2)
+    else None) [@@warning "-w-40"]
 
-let re re' s = (
-  Tjr_substring.(re ~re:(Str.regexp re') {s_=s;i_=0}) |> fun xs ->
-  if xs <> []
-  then Tjr_string.split_at s (List.hd xs) |> fun (s1,s2) -> Some(s1,s2)
-  else None) [@@warning "-w-40"]
+let re re' = (
+  let re' = Str.regexp re' in
+  fun s ->
+    Tjr_substring.(re ~re:re' {s_=s;i_=0}) |> fun xs ->
+    if xs <> []
+    then Tjr_string.split_at s (List.hd xs) |> fun (s1,s2) -> Some(s1,s2)
+    else None) [@@warning "-w-40"]
+
+let try_ p s = 
+  p s |> function
+  | None -> Some(None,s) 
+  | Some(x,s) -> Some(Some x,s)
 
 let rec plus ~sep p = 
   p |>> fun x ->
-  can (sep -- p) |>> fun more ->
-  if more then sep -- plus ~sep p |>> fun (_,xs) -> return (x::xs)
-  else return [x]
+  (try_ (sep -- plus ~sep p)) |>> function
+  | None -> return [x]
+  | Some (_,xs) -> return (x::xs)
 
+let save s = Some(s,s)
+
+let restore s' s = Some((),s')
+
+(* a bit fiddly! *)
 let star ~sep p =
-  can p |>> fun at_least_one ->
-  if at_least_one then plus ~sep p else return []
+  try_ p |>> function
+  | None -> return []
+  | Some x -> 
+    save |>> fun state ->
+    try_ sep |>> function
+    | None -> restore state |>> fun _ -> return [x]
+    | _ -> 
+      try_ (plus ~sep p) |>> function
+      | None -> restore state |>> fun _ -> return [x]
+      | Some xs -> return (x::xs)
 
 (* shortcut alternative *)
-let alt a b = can a |>> fun x -> if x then a else b
+let alt a b = 
+  try_ a |>> function
+  | None -> b
+  | Some x -> return x
+
 let ( || ) = alt       
 
 let discard p = p |>> fun _ -> return ()
@@ -61,7 +104,7 @@ let _0 = return ()
 let ( --- ) a b = (a -- b) |>> fun _ -> _0
            
 let _Some x = Some x
-let opt x = can x |>> fun b -> if b then x |>> fun y -> return (Some y) else return None
+let opt x = try_ x 
 let _ = opt
 
 (* grammar of grammars ---------------------------------------------- *)
@@ -70,7 +113,9 @@ let comm = a "(*" -- upto_a "*)" -- a "*)"  (* FIXME nested comments *)
 let rec ws s = 
   s |> (* 0 or more *) (* re is longest match *)
   (re "[ \n]*") --- 
-  (can comm |>> fun c -> if c then comm --- ws else _0)
+  (try_ comm |>> function
+    | None -> _0
+    | Some _ -> ws |>> fun _ -> _0)
 let nt = re "[A-Z]+" 
 let tm = 
   let sq = "'" in
@@ -95,6 +140,12 @@ let grammar = ws -- rules -- ws |>> fun ((_,x2),_) -> return x2
 
 
 (* example ---------------------------------------------------------- *)
+
+let example = {|?w?|}
+
+let _ = tm example
+
+let _ = example |> a "?" -- re"[a-z]+"
 
 let example = {|
 
@@ -383,6 +434,20 @@ FIELDDECL -> s1=FIELDNAME w1=?w? ":" w2=?w? s2=POLYTYPEXPR
 
 let _ = print_endline "Parsing grammar..."
 
-let g' = grammar g
+let g' = grammar g 
+
+(* let _ = g' |> function Some x -> x | None -> failwith __LOC__ *)
 
 let _ = print_endline "finished!"
+
+(*
+
+$ time ./a.out
+Parsing grammar...
+finished!
+
+real	0m0.010s
+user	0m0.000s
+sys	0m0.004s
+
+*)
