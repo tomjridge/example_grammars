@@ -2,22 +2,7 @@
 
 (* worth working with indexes rather than strings? *)
 
-let starts_with ~prefix b =
-  let len = String.length prefix in
-  len > String.length b |> function 
-  | true -> false
-  | false -> 
-    let rec f j = 
-      if j >= len then true else
-      prefix.[j] = b.[j] &&
-      f (j+1)
-    in
-    f 0
-
-let drop n s =
-  String.length s |> fun l ->
-  if n >= l then "" else
-    String.sub s n (l-n)
+let (starts_with,drop) = Tjr_string.(starts_with,drop)
 
 let upto_a lit = Tjr_substring.upto_re ~re:Str.(regexp_string lit)
 
