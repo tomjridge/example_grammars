@@ -2,6 +2,7 @@ SHELL:=bash
 
 build:
 	dune build @install
+	dune exec bin/test.exe
 
 install:
 	dune install

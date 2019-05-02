@@ -4,3 +4,5 @@ src_ext/p3
 src_ext/p4
 resources
 Makefile.local
+/example_grammars.install
+/src/.merlin

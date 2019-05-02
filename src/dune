@@ -1,5 +1,6 @@
 (library 
   (public_name example_grammars)
+  (flags (:standard -w -27-8-40-32-39))
   (preprocessor_deps abnf_grammar.txt)
-  (preprocess (pps ppx_blob))
-  (libraries ppx_blob))
+  (preprocess (pps ppx_blob ppx_jane))
+  (libraries ppx_blob ppx_jane core_kernel p0_lib))
