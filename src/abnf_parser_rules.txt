@@ -2,84 +2,84 @@
 
 let _NUM_VAL_REST,_CWSP,_PROSE_VAL,_REPEAT,_CHAR_VAL,_ALTERNATION,_REPETITION,_ELEMENT,_RULELIST,_CONCATENATION,_ELEMENTS,_CNL,_RULENAME,_EQUAL_OR_EQUAL_SLASH,_STAR_WSP_VCHAR,_S,_BIN_VAL,_GROUP,_DEC_VAL,_STAR_CONCATENATION_REST,_OPTION,_STAR_ALTERNATION_REST,_STAR_CWSP_CNL,_RULE,_HEX_VAL,_ONE_STAR_CWSP,_COMMENT,_DEFINED_AS,_NUM_VAL,_STAR_CWSP,_RULELIST_ELT = mk_nt(),mk_nt(),mk_nt(),mk_nt(),mk_nt(),mk_nt(),mk_nt(),mk_nt(),mk_nt(),mk_nt(),mk_nt(),mk_nt(),mk_nt(),mk_nt(),mk_nt(),mk_nt(),mk_nt(),mk_nt(),mk_nt(),mk_nt(),mk_nt(),mk_nt(),mk_nt(),mk_nt(),mk_nt(),mk_nt(),mk_nt(),mk_nt(),mk_nt(),mk_nt(),mk_nt() in
 [
-_S -->_4 (?ws?,_RULELIST,?ws?,?eof?)    (fun (((x1,x2),x3),x4) ->  x2 |> sexp_of_rulelist |> Sexplib.Sexp.to_string_hum |> print_endline );
+_S -->_4 (?ws?,_RULELIST,?ws?,?eof?)                                                            (fun (((x1,x2),x3),x4) ->  x2 |> sexp_of_rulelist |> Sexplib.Sexp.to_string_hum |> print_endline );
 
-_RULELIST -->_1 _RULELIST_ELT    (fun x1 ->  RULELIST[x1] );
-_RULELIST -->_2 (_RULELIST_ELT,_RULELIST)    (fun (x1,x2) ->  match x2 with RULELIST(xs) -> RULELIST(x1 :: xs) );
+_RULELIST -->_1 _RULELIST_ELT                                                                   (fun x1 ->  RULELIST[x1] );
+_RULELIST -->_2 (_RULELIST_ELT,_RULELIST)                                                       (fun (x1,x2) ->  match x2 with RULELIST(xs) -> RULELIST(x1 :: xs) );
 
-_RULELIST_ELT -->_1 _RULE    (fun x1 ->  RE_RULE(x1) );
-_RULELIST_ELT -->_1 ?wsplus?    (fun x1 ->  RE_CWSP_CNL(c x1) );
+_RULELIST_ELT -->_1 _RULE                                                                       (fun x1 ->  RE_RULE(x1) );
+_RULELIST_ELT -->_1 ?wsplus?                                                                    (fun x1 ->  RE_CWSP_CNL(c x1) );
 
-_STAR_CWSP_CNL -->_1 _CNL    (fun x1 ->  x1 );
-_STAR_CWSP_CNL -->_2 (_CWSP,_STAR_CWSP_CNL)    (fun (x1,x2) ->  ss_concat [x1;x2] |> dest_Some );
+_STAR_CWSP_CNL -->_1 _CNL                                                                       (fun x1 ->  x1 );
+_STAR_CWSP_CNL -->_2 (_CWSP,_STAR_CWSP_CNL)                                                     (fun (x1,x2) ->  ss_concat [x1;x2] |> dest_Some );
 
-_RULE -->_4 (_RULENAME,_DEFINED_AS,_ELEMENTS,_CNL)    (fun (((x1,x2),x3),x4) ->  RULE(x1,x2,x3,c x4) );
+_RULE -->_4 (_RULENAME,_DEFINED_AS,_ELEMENTS,_CNL)                                              (fun (((x1,x2),x3),x4) ->  RULE(x1,x2,x3,c x4) );
 
-_RULENAME -->_1 ?rulename?    (fun x1 ->  RULENAME (c x1) );
+_RULENAME -->_1 ?rulename?                                                                      (fun x1 ->  RULENAME (c x1) );
 
-_DEFINED_AS -->_3 (_STAR_CWSP,_EQUAL_OR_EQUAL_SLASH,_STAR_CWSP)    (fun ((x1,x2),x3) ->  x2 );
+_DEFINED_AS -->_3 (_STAR_CWSP,_EQUAL_OR_EQUAL_SLASH,_STAR_CWSP)                                 (fun ((x1,x2),x3) ->  x2 );
 
-_STAR_CWSP -->_1 ?eps?    (fun x1 ->  () );
-_STAR_CWSP -->_2 (_CWSP,_STAR_CWSP)    (fun (x1,x2) ->  () );
+_STAR_CWSP -->_1 ?eps?                                                                          (fun x1 ->  () );
+_STAR_CWSP -->_2 (_CWSP,_STAR_CWSP)                                                             (fun (x1,x2) ->  () );
 
-_EQUAL_OR_EQUAL_SLASH -->_1 a"="    (fun x1 ->  DAS_EQUAL );
-_EQUAL_OR_EQUAL_SLASH -->_1 a"=/"    (fun x1 ->  DAS_EQUAL_SLASH );
+_EQUAL_OR_EQUAL_SLASH -->_1 a"="                                                                (fun x1 ->  DAS_EQUAL );
+_EQUAL_OR_EQUAL_SLASH -->_1 a"=/"                                                               (fun x1 ->  DAS_EQUAL_SLASH );
 
-_ELEMENTS -->_2 (_ALTERNATION,_STAR_CWSP)    (fun (x1,x2) ->  ELEMENTS(x1) );
+_ELEMENTS -->_2 (_ALTERNATION,_STAR_CWSP)                                                       (fun (x1,x2) ->  ELEMENTS(x1) );
 
-_CWSP -->_1 ?wsp?    (fun x1 ->  x1 );
-_CWSP -->_2 (_CNL,?wsp?)    (fun (x1,x2) ->  ss_concat [x1;x2] |> dest_Some );
+_CWSP -->_1 ?wsp?                                                                               (fun x1 ->  x1 );
+_CWSP -->_2 (_CNL,?wsp?)                                                                        (fun (x1,x2) ->  ss_concat [x1;x2] |> dest_Some );
 
-_CNL -->_1 _COMMENT    (fun x1 ->  x1 );
-_CNL -->_1 ?crlf?    (fun x1 ->  x1 );
+_CNL -->_1 _COMMENT                                                                             (fun x1 ->  x1 );
+_CNL -->_1 ?crlf?                                                                               (fun x1 ->  x1 );
 
-_COMMENT -->_3 (a";",_STAR_WSP_VCHAR,?crlf?)    (fun ((x1,x2),x3) ->  ss_concat [x1;x2;x3] |> dest_Some );
+_COMMENT -->_3 (a";",_STAR_WSP_VCHAR,?crlf?)                                                    (fun ((x1,x2),x3) ->  ss_concat [x1;x2;x3] |> dest_Some );
 
-_STAR_WSP_VCHAR -->_1 ?eps?    (fun x1 ->  x1 );
-_STAR_WSP_VCHAR -->_2 (?wsp?,_STAR_WSP_VCHAR)    (fun (x1,x2) ->  ss_concat [x1;x2] |> dest_Some );
-_STAR_WSP_VCHAR -->_2 (?vchar?,_STAR_WSP_VCHAR)    (fun (x1,x2) ->  ss_concat [x1;x2] |> dest_Some );
+_STAR_WSP_VCHAR -->_1 ?eps?                                                                     (fun x1 ->  x1 );
+_STAR_WSP_VCHAR -->_2 (?wsp?,_STAR_WSP_VCHAR)                                                   (fun (x1,x2) ->  ss_concat [x1;x2] |> dest_Some );
+_STAR_WSP_VCHAR -->_2 (?vchar?,_STAR_WSP_VCHAR)                                                 (fun (x1,x2) ->  ss_concat [x1;x2] |> dest_Some );
 
-_ALTERNATION -->_2 (_CONCATENATION,_STAR_ALTERNATION_REST)    (fun (x1,x2) ->  ALTERNATION(x1::x2) );
+_ALTERNATION -->_2 (_CONCATENATION,_STAR_ALTERNATION_REST)                                      (fun (x1,x2) ->  ALTERNATION(x1::x2) );
 
-_STAR_ALTERNATION_REST -->_1 ?eps?    (fun x1 ->  [] );
-_STAR_ALTERNATION_REST -->_5 (_STAR_CWSP,a"/",_STAR_CWSP,_CONCATENATION,_STAR_ALTERNATION_REST)    (fun ((((x1,x2),x3),x4),x5) ->  x4::x5 );
+_STAR_ALTERNATION_REST -->_1 ?eps?                                                              (fun x1 ->  [] );
+_STAR_ALTERNATION_REST -->_5 (_STAR_CWSP,a"/",_STAR_CWSP,_CONCATENATION,_STAR_ALTERNATION_REST) (fun ((((x1,x2),x3),x4),x5) ->  x4::x5 );
 
-_CONCATENATION -->_2 (_REPETITION,_STAR_CONCATENATION_REST)    (fun (x1,x2) ->  CONCATENATION(x1::x2) );
+_CONCATENATION -->_2 (_REPETITION,_STAR_CONCATENATION_REST)                                     (fun (x1,x2) ->  CONCATENATION(x1::x2) );
 
-_STAR_CONCATENATION_REST -->_1 ?eps?    (fun x1 ->  [] );
-_STAR_CONCATENATION_REST -->_3 (_ONE_STAR_CWSP,_REPETITION,_STAR_CONCATENATION_REST)    (fun ((x1,x2),x3) ->  x2::x3 );
+_STAR_CONCATENATION_REST -->_1 ?eps?                                                            (fun x1 ->  [] );
+_STAR_CONCATENATION_REST -->_3 (_ONE_STAR_CWSP,_REPETITION,_STAR_CONCATENATION_REST)            (fun ((x1,x2),x3) ->  x2::x3 );
 
-_ONE_STAR_CWSP -->_2 (_CWSP,_STAR_CWSP)    (fun (x1,x2) ->  () );
+_ONE_STAR_CWSP -->_2 (_CWSP,_STAR_CWSP)                                                         (fun (x1,x2) ->  () );
 
-_REPETITION -->_1 _ELEMENT    (fun x1 ->  REP(None,x1) );
-_REPETITION -->_2 (_REPEAT,_ELEMENT)    (fun (x1,x2) ->  REP(Some(x1),x2) );
+_REPETITION -->_1 _ELEMENT                                                                      (fun x1 ->  REP(None,x1) );
+_REPETITION -->_2 (_REPEAT,_ELEMENT)                                                            (fun (x1,x2) ->  REP(Some(x1),x2) );
 
-_REPEAT -->_1 ?repeat?    (fun x1 ->  REPEAT );
+_REPEAT -->_1 ?repeat?                                                                          (fun x1 ->  REPEAT );
 
-_ELEMENT -->_1 _RULENAME    (fun x1 ->  EL_RULENAME x1 );
-_ELEMENT -->_1 _GROUP    (fun x1 ->  EL_GROUP x1 );
-_ELEMENT -->_1 _OPTION    (fun x1 ->  EL_OPTION x1 );
-_ELEMENT -->_1 _CHAR_VAL    (fun x1 ->  EL_CHAR_VAL );
-_ELEMENT -->_1 _NUM_VAL    (fun x1 ->  EL_NUM_VAL );
-_ELEMENT -->_1 _PROSE_VAL    (fun x1 ->  EL_PROSE_VAL );
+_ELEMENT -->_1 _RULENAME                                                                        (fun x1 ->  EL_RULENAME x1 );
+_ELEMENT -->_1 _GROUP                                                                           (fun x1 ->  EL_GROUP x1 );
+_ELEMENT -->_1 _OPTION                                                                          (fun x1 ->  EL_OPTION x1 );
+_ELEMENT -->_1 _CHAR_VAL                                                                        (fun x1 ->  EL_CHAR_VAL );
+_ELEMENT -->_1 _NUM_VAL                                                                         (fun x1 ->  EL_NUM_VAL );
+_ELEMENT -->_1 _PROSE_VAL                                                                       (fun x1 ->  EL_PROSE_VAL );
 
-_GROUP -->_5 (a"(",_STAR_CWSP,_ALTERNATION,_STAR_CWSP,a")")    (fun ((((x1,x2),x3),x4),x5) ->  GROUP(x3) );
+_GROUP -->_5 (a"(",_STAR_CWSP,_ALTERNATION,_STAR_CWSP,a")")                                     (fun ((((x1,x2),x3),x4),x5) ->  GROUP(x3) );
 
-_OPTION -->_5 (a"[",_STAR_CWSP,_ALTERNATION,_STAR_CWSP,a"]")    (fun ((((x1,x2),x3),x4),x5) ->  OPTION(x3) );
+_OPTION -->_5 (a"[",_STAR_CWSP,_ALTERNATION,_STAR_CWSP,a"]")                                    (fun ((((x1,x2),x3),x4),x5) ->  OPTION(x3) );
 
-_CHAR_VAL -->_3 (?dquote?,?char_vals?,?dquote?)    (fun ((x1,x2),x3) ->  ss_concat [x1;x2;x3] |> dest_Some );
+_CHAR_VAL -->_3 (?dquote?,?char_vals?,?dquote?)                                                 (fun ((x1,x2),x3) ->  ss_concat [x1;x2;x3] |> dest_Some );
 
-_NUM_VAL -->_2 (a"%",_NUM_VAL_REST)    (fun (x1,x2) ->  ss_concat [x1;x2] |> dest_Some );
+_NUM_VAL -->_2 (a"%",_NUM_VAL_REST)                                                             (fun (x1,x2) ->  ss_concat [x1;x2] |> dest_Some );
 
-_NUM_VAL_REST -->_1 _BIN_VAL    (fun x1 ->  x1 );
-_NUM_VAL_REST -->_1 _DEC_VAL    (fun x1 ->  x1 );
-_NUM_VAL_REST -->_1 _HEX_VAL    (fun x1 ->  x1 );
+_NUM_VAL_REST -->_1 _BIN_VAL                                                                    (fun x1 ->  x1 );
+_NUM_VAL_REST -->_1 _DEC_VAL                                                                    (fun x1 ->  x1 );
+_NUM_VAL_REST -->_1 _HEX_VAL                                                                    (fun x1 ->  x1 );
 
-_BIN_VAL -->_3 (a"b",?one_star_bit?,?bin_val_rest?)    (fun ((x1,x2),x3) ->  ss_concat [x1;x2;x3] |> dest_Some );
+_BIN_VAL -->_3 (a"b",?one_star_bit?,?bin_val_rest?)                                             (fun ((x1,x2),x3) ->  ss_concat [x1;x2;x3] |> dest_Some );
 
-_DEC_VAL -->_3 (a"d",?one_star_digit?,?dec_val_rest?)    (fun ((x1,x2),x3) ->  ss_concat [x1;x2;x3] |> dest_Some );
+_DEC_VAL -->_3 (a"d",?one_star_digit?,?dec_val_rest?)                                           (fun ((x1,x2),x3) ->  ss_concat [x1;x2;x3] |> dest_Some );
 
-_HEX_VAL -->_3 (a"x",?one_star_hexdig?,?hex_val_rest?)    (fun ((x1,x2),x3) ->  ss_concat [x1;x2;x3] |> dest_Some );
+_HEX_VAL -->_3 (a"x",?one_star_hexdig?,?hex_val_rest?)                                          (fun ((x1,x2),x3) ->  ss_concat [x1;x2;x3] |> dest_Some );
 
-_PROSE_VAL -->_3 (a"<",?prose_val_chars?,a">")    (fun ((x1,x2),x3) ->  x2 );
+_PROSE_VAL -->_3 (a"<",?prose_val_chars?,a">")                                                  (fun ((x1,x2),x3) ->  x2 );
 ]
