@@ -1,0 +1,5 @@
+(library 
+  (public_name example_grammars)
+  (preprocessor_deps abnf_grammar.txt)
+  (preprocess (pps ppx_blob))
+  (libraries ppx_blob))
