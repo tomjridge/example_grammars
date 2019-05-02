@@ -10,6 +10,7 @@ module Grammar_type = struct
   type tm = Tm_lit of (string * string * string) | Tm_qu of string [@@deriving sexp]
   type sym = Nt of nt | Tm of tm [@@deriving sexp]
   type syms = sym list [@@deriving sexp]
+(*
   type action = string [@@deriving sexp]
   type syms_act = syms * action [@@deriving sexp]
   type rhs = syms_act list [@@deriving sexp]
@@ -18,8 +19,9 @@ module Grammar_type = struct
 
   let grammar_to_string g = 
     g |> sexp_of_grammar |> Core_kernel.Sexp.to_string_hum 
+*)
 end
-let grammar_to_string = Grammar_type.grammar_to_string
+(* let grammar_to_string = Grammar_type.grammar_to_string *)
 
 
 module Grammar_of_grammars = struct 
@@ -101,7 +103,7 @@ let test () =
   sexp |> export_of_sexp |> fun e -> 
   print_endline "OK";
   print_endline Blobs.abnf_grammar_sexp;
-  Printf.printf "YYY%s %d %d\n%!" __LOC__ (String.length str) (String.length Blobs.abnf_grammar_sexp);
+  (* Printf.printf "%s %d %d\n%!" __LOC__ (String.length str) (String.length Blobs.abnf_grammar_sexp); *)
   assert(str = Blobs.abnf_grammar_sexp)
 (*
   export_of_sexp |> fun g' ->
