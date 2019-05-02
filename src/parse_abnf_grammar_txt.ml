@@ -88,7 +88,23 @@ module Grammar_of_grammars = struct
 end
 open Grammar_of_grammars
 
+open Core_kernel
+
 let test () = 
   P0_lib.to_fun grammar Blobs.abnf_grammar_txt |> fun (Some(g,"")) -> 
-  print_endline (g |> export_to_string)
-
+  g |> export_to_string |> fun str -> 
+  print_endline str;
+  str |> Sexp.of_string |> fun sexp ->
+  sexp |> Sexp.to_string_hum |> fun str' ->
+  print_endline str';
+  assert(str=str');
+  sexp |> export_of_sexp |> fun e -> 
+  print_endline "OK";
+  print_endline Blobs.abnf_grammar_sexp;
+  Printf.printf "YYY%s %d %d\n%!" __LOC__ (String.length str) (String.length Blobs.abnf_grammar_sexp);
+  assert(str = Blobs.abnf_grammar_sexp)
+(*
+  export_of_sexp |> fun g' ->
+  g |> export_to_string |> Core_kernel.sexp_of_string |> export_of_sexp |> fun g' ->
+  assert(g=g')
+*)
