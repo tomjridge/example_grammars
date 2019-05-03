@@ -162,7 +162,7 @@ _STAR_CWSP_CNL -->_1 (nt _CNL)    (fun x1 ->  x1 );
 
 _RULE -->_4 (nt _RULENAME,nt _DEFINED_AS,nt _ELEMENTS,nt _CNL)    (fun (x1,x2,x3,x4) ->  RULE(x1,x2,x3,x4) );
 
-_RULENAME -->_1 (rulename)    (fun x1 ->  RULENAME x1 );
+_RULENAME -->_1 (rulename)    (fun x1 ->  print_endline "xxx"; RULENAME x1 );
 
 _DEFINED_AS -->_3 (nt _STAR_CWSP,nt _EQUAL_OR_EQUAL_SLASH,nt _STAR_CWSP)    (fun (x1,x2,x3) ->  x2 );
 
@@ -363,7 +363,7 @@ module Internal2 = struct
         in
         let r = alts rhss in
         let _ = r in
-        r
+        debug () >>= fun () -> r
       and sym_to_parser = function
         | Nt nt -> nt_to_parser nt
         | Tm p -> Obj.magic p
@@ -402,10 +402,8 @@ let _S = nt_to_parser _S
 open P0_lib
 
 let test () = 
-  to_fun _S {|
-address         = "(" addr-name SP addr-adl SP addr-mailbox SP
-                  addr-host ")"
-|}
+  to_fun _S {|address         = "(" addr-name SP addr-adl SP addr-mailbox SP
+                  addr-host ")"|}
   |> function
 | None -> failwith __LOC__
 | (Some(_,rest)) -> Printf.printf "Remaining input: %s  (%s)\n%!" rest __FILE__
