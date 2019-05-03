@@ -1,36 +1,6 @@
 (** A parser for ABNF format grammars *)
 
-let c x = x
-
-let string_concat xs = String.concat "" xs 
-
-let dest_Some = function | Some x -> x | _ -> failwith __LOC__
-
-module type INTERNAL_TYPED_SYMS = sig
-  type 'a nt
-  type 'a sym
-  type 'a tm
-  val mk_nt: unit -> 'a nt
-  val a: string -> string sym
-end
-
-module type INTERNAL_REQS = sig 
-  include INTERNAL_TYPED_SYMS
-  type 'a rhs 
-  type rule 
-  val _1: 'a sym -> ('a -> 'b) -> 'b rhs
-  val _2: ('a sym * 'b sym) -> ('a * 'b -> 'c) -> 'c rhs
-  val _3: ('a sym * 'b sym * 'c sym) -> ('a * 'b * 'c -> 'd) -> 'd rhs
-  val _4: ('a sym * 'b sym * 'c sym * 'd sym) -> ('a * 'b * 'c * 'd -> 'z) -> 'z rhs
-  val _5: ('a sym * 'b sym * 'c sym * 'd sym * 'e sym) -> ('a * 'b * 'c * 'd * 'e -> 'z) -> 'z rhs
-
-  val ( --> ) : 'a nt -> 'a rhs -> rule
-  val nt : 'a nt -> 'a sym
-
-  type 'a grammar 
-  val grammar: name:string -> descr:string -> initial_nt:'a nt ->
-    rules:rule list -> 'a grammar
-end
+(* let dest_Some = function | Some x -> x | _ -> failwith __LOC__ *)
 
 module Abnf_grammar_datatype = struct
   type ty_option = OPTION of alternation 
@@ -49,36 +19,72 @@ module Abnf_grammar_datatype = struct
 end
 open Abnf_grammar_datatype
 
+
+module type INTERNAL_TYPED_SYMS = sig
+  type 'a nt
+  type 'a sym
+  (* type 'a tm *)
+  val mk_nt: unit -> 'a nt
+  val a: string -> string sym
+end
+
+module type INTERNAL_REQS = sig 
+  include INTERNAL_TYPED_SYMS
+  type 'a rhs 
+  type rule 
+  val _1: 'a sym -> ('a -> 'z) -> 'z rhs
+  val _2: ('a sym * 'b sym) -> ('a * 'b -> 'z) -> 'z rhs
+  val _3: ('a sym * 'b sym * 'c sym) -> ('a * 'b * 'c -> 'z) -> 'z rhs
+  val _4: ('a sym * 'b sym * 'c sym * 'd sym) -> ('a * 'b * 'c * 'd -> 'z) -> 'z rhs
+  val _5: ('a sym * 'b sym * 'c sym * 'd sym * 'e sym) -> ('a * 'b * 'c * 'd * 'e -> 'z) -> 'z rhs
+
+  val ( --> ) : 'a nt -> 'a rhs -> rule
+  val nt : 'a nt -> 'a sym
+
+  type 'a grammar 
+  val grammar: name:string -> descr:string -> initial_nt:'a nt ->
+    rules:rule list -> 'a grammar
+
+  (** for defining terminals without exposing the sym types, we have
+     an extra argument to convert a string regexp into a (terminal)
+     sym *)
+  val regexp_string_to_tm: string -> string sym
+end
+
+
+module Internal(Reqs: INTERNAL_REQS) : sig 
+  val _S : rulelist Reqs.nt
+end = struct
+
+let string_concat xs = String.concat "" xs 
+
+open Reqs
+
 module Terminals = struct
-  let parse_RE re = failwith ""
-  let rulename = parse_RE "[A-Za-z][-A-Za-z0-9]*"
-  let repeat = parse_RE "[0-9]*[*][0-9]*\\|[0-9]+"
-  let dquote = failwith ""
-  let char_vals = parse_RE "[^\"]*"
-  let one_star_bit = parse_RE "[01]+"
-  let bin_val_rest = parse_RE "\\([.][0-1]+\\)+\\|[-][0-1]+"
-  let one_star_digit = parse_RE "[0-9]+"
-  let dec_val_rest = parse_RE "\\([.][0-9]+\\)+\\|[-][0-9]+"
-  let one_star_hexdig = parse_RE "[0-9A-Fa-f]+"
-  let hex_val_rest = parse_RE "\\([.][0-9A-Fa-f]+\\)+\\|[-][0-9A-Fa-f]+"
-  let prose_val_chars = parse_RE "[^>]*"
-  let crlf = parse_RE "[\n]" (* FIXME really CR LF *)
-  let vchar = parse_RE "[\x21-\x7E]"
-  let wsp = parse_RE "[ \x09]"
-  let ws = (parse_RE "[ \n]*")
-  let wsplus = (parse_RE "[ \n]+")
 
-  let eps = failwith ""
+  (** NOTE the following terminals are defined using Str format regexps *)
 
-  let eof = failwith ""
+  let _str_regexp (s:string) : string sym = regexp_string_to_tm s
+  let rulename = _str_regexp "[A-Za-z][-A-Za-z0-9]*"
+  let repeat = _str_regexp "[0-9]*[*][0-9]*\\|[0-9]+"
+  let dquote = a{|"|}
+  let char_vals = _str_regexp "[^\"]*"
+  let one_star_bit = _str_regexp "[01]+"
+  let bin_val_rest = _str_regexp "\\([.][0-1]+\\)+\\|[-][0-1]+"
+  let one_star_digit = _str_regexp "[0-9]+"
+  let dec_val_rest = _str_regexp "\\([.][0-9]+\\)+\\|[-][0-9]+"
+  let one_star_hexdig = _str_regexp "[0-9A-Fa-f]+"
+  let hex_val_rest = _str_regexp "\\([.][0-9A-Fa-f]+\\)+\\|[-][0-9A-Fa-f]+"
+  let prose_val_chars = _str_regexp "[^>]*"
+  let crlf = _str_regexp "[\n]" (* FIXME really CR LF *)
+  let vchar = _str_regexp "[\x21-\x7E]"
+  let wsp = _str_regexp "[ \x09]"
+  let ws = _str_regexp "[ \n]*"
+  let wsplus = _str_regexp "[ \n]+"
+  let eps = a""
 end
 open Terminals
 
-module Internal(Reqs: INTERNAL_REQS) : sig 
-  val grammar : rulelist Reqs.grammar
-end = struct
-
-open Reqs
 
 (** NOTE this is generated code, see src/generate_abnf_parser.ml*)
 
@@ -223,7 +229,7 @@ _HEX_VAL -->_3 (a"x",one_star_hexdig,hex_val_rest)    (fun (x1,x2,x3) ->  string
 _PROSE_VAL -->_3 (a"<",prose_val_chars,a">")    (fun (x1,x2,x3) ->  x2 );
 ]
 
-let _ = _S
+let _ : rulelist nt = _S
 
 (** Wrap up the result and export *)
 let grammar = Reqs.grammar ~name:"ABNF" ~descr:("ABNF parser, see "^__FILE__)
@@ -231,3 +237,122 @@ let grammar = Reqs.grammar ~name:"ABNF" ~descr:("ABNF parser, see "^__FILE__)
     ~rules
 
 end
+
+
+(** Instantiate the Internal functor, and export the results *)
+module Internal2 = struct
+
+  module Typed_syms = struct
+    type 'a nt = int
+
+    type 'a sym = Nt of 'a nt | Tm of string P0_lib.m
+
+    let mk_nt = 
+      let free = ref 0 in
+      fun () -> 
+        let x = !free in
+        free:=!free+1;
+        x
+
+    let a s = Tm (P0_lib.a s)
+  end
+  module Reqs = struct
+    include Typed_syms
+
+    (** To store the defns of nts *)
+    type 'z rhs = 
+      | Rhs1: 'a sym * ('a -> 'z) -> 'z rhs
+      | Rhs2: ('a sym * 'b sym) * ('a * 'b -> 'z) -> 'z rhs
+      | Rhs3: ('a sym * 'b sym * 'c sym) * ('a * 'b * 'c -> 'z) -> 'z rhs
+      | Rhs4: ('a sym * 'b sym * 'c sym * 'd sym) * ('a * 'b * 'c * 'd -> 'z) -> 'z rhs
+      | Rhs5: ('a sym * 'b sym * 'c sym * 'd sym * 'e sym) * ('a * 'b * 'c * 'd * 'e -> 'z) -> 'z rhs
+
+    type rule = unit (* Rule: 'a nt * 'a rhs -> rule ; we mutate 'a nt directly *)
+
+    include struct
+      (* open P0_lib *)
+      let _1 s f = Rhs1(s,f)
+      let _2 (s1,s2) f = Rhs2((s1,s2),f)
+      let _3 ss f = Rhs3(ss,f)
+      let _4 ss f = Rhs4(ss,f)
+      let _5 ss f = Rhs5(ss,f)
+    end
+
+    type univ
+    let to_univ: 'a rhs list -> univ = fun x -> Obj.magic x
+    let from_univ: univ -> 'a rhs list = fun x -> Obj.magic x
+
+    let tbl = Hashtbl.create 100    
+
+    (* this is where we have to define an 'a m in terms of the rhs *)
+    let ( --> ) (type a) (nt:a nt) (rhs:a rhs) : unit = 
+      let rhss = Hashtbl.find_opt tbl nt |> function
+        | None -> []
+        | Some rhss -> (from_univ rhss : a rhs list)
+      in
+      Hashtbl.replace tbl nt (to_univ(rhss@[rhs]))
+
+    let nt (nt:'a nt) : 'a sym = Nt nt
+
+    type 'a grammar = { name:string; descr:string; initial_nt: 'a nt }
+    let grammar  ~name ~descr ~initial_nt ~(rules:rule list) = 
+      { name; descr; initial_nt }
+
+    let regexp_string_to_tm s = Tm (P0_lib.Str_.re s)
+
+    open P0_lib 
+    let rec nt_to_parser (type a) (nt:a nt) : a P0_lib.m = 
+      (* we look up the rhss in the hashtbl, and convert to a parser *)
+      let rhss : a rhs list = 
+        Hashtbl.find_opt tbl nt |> Obj.magic |> function
+        | None -> []
+        | Some rhss -> rhss
+      in
+      (* FIXME in the following it would be nicer if we had a list of
+         sym and an action that took a list *)
+      let rhs_to_parser = function
+        | Rhs1 (s,f) -> (a"" >>= fun _ -> 
+            match s with
+            | Nt nt -> nt_to_parser nt >>= fun x -> return (f (Obj.magic x))
+            | Tm p -> p >>= fun x -> return (f (Obj.magic x)))
+      in
+      let rec alts = function
+        | [] -> of_fun (fun s -> None)
+        | [rhs] -> rhs_to_parser rhs
+        | rhs::rest -> (rhs_to_parser rhs) || (alts rest)
+      in
+      alts rhss
+
+    let _ = nt_to_parser
+
+  end
+  module Internal_instance = Internal(Reqs)
+
+  
+  
+  (* include (Internal_instance : sig val grammar : rulelist Reqs.grammar end) *)
+
+  module Export : sig
+    type 'a nt
+    val _S : rulelist nt
+    val nt_to_parser: 'a nt -> 'a P0_lib.m
+  end = struct
+    type 'a nt = int
+    let _S = Internal_instance._S
+    let nt_to_parser = Reqs.nt_to_parser
+  end
+    
+end
+
+include Internal2.Export
+
+let _S = nt_to_parser _S 
+
+open P0_lib
+
+let test () = 
+  to_fun _S {|
+address         = "(" addr-name SP addr-adl SP addr-mailbox SP
+                  addr-host ")"
+|}
+  |> fun (Some(_,rest)) -> Printf.printf "Remaining input: %s  (%s)\n%!" rest __FILE__

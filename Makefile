@@ -11,7 +11,7 @@ install:
 # 	dune exec bin/p0_example.exe
 
 BUILD_DOC:=_build/default/_doc/_html
-TMP:=/tmp/p0
+TMP:=/tmp/example_grammars
 docs: FORCE
 	dune build @doc
 	mkdir -p $(TMP)

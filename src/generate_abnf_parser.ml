@@ -1,4 +1,4 @@
-(** Use abnf_grammar.{txt,sexp} to generate an ABNF parser. *)
+(** Use abnf_grammar.txt,sexp to generate an ABNF parser. *)
 include struct
   open Parse_abnf_grammar_txt.Grammar_of_grammars
 
