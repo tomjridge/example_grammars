@@ -354,7 +354,7 @@ module Internal2 = struct
               P0_lib.sequence ps >>= fun xs -> 
               let r = act xs in
               let _ = r in  (* NOTE univ *)
-              return (Obj.magic r))
+              return r)
         in
         let rec alts = function
           | [] -> of_fun (fun s -> None)
@@ -373,6 +373,8 @@ module Internal2 = struct
 
     let nt_to_parser : 'a nt -> 'a P0_lib.m = 
       fun nt -> Obj.magic (Internal3.nt_to_parser nt)
+
+    let _ = nt_to_parser
 
   end
   module Internal_instance = Internal(Reqs)
