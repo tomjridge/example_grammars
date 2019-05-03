@@ -4,15 +4,14 @@
    (((Nt RULELIST_ELT) (Nt RULELIST))
     " match x2 with RULELIST(xs) -> RULELIST(x1 :: xs) ")))
  (RULELIST_ELT
-  ((((Nt RULE)) " RE_RULE(x1) ")
-   (((Tm (Tm_qu wsplus))) " RE_CWSP_CNL(c x1) ")))
+  ((((Nt RULE)) " RE_RULE(x1) ") (((Tm (Tm_qu wsplus))) " RE_CWSP_CNL(x1) ")))
  (STAR_CWSP_CNL
   ((((Nt CNL)) " x1 ")
    (((Nt CWSP) (Nt STAR_CWSP_CNL)) " string_concat [x1;x2] ")))
  (RULE
   ((((Nt RULENAME) (Nt DEFINED_AS) (Nt ELEMENTS) (Nt CNL))
-    " RULE(x1,x2,x3,c x4) ")))
- (RULENAME ((((Tm (Tm_qu rulename))) " RULENAME (c x1) ")))
+    " RULE(x1,x2,x3,x4) ")))
+ (RULENAME ((((Tm (Tm_qu rulename))) " RULENAME x1 ")))
  (DEFINED_AS
   ((((Nt STAR_CWSP) (Nt EQUAL_OR_EQUAL_SLASH) (Nt STAR_CWSP)) " x2 ")))
  (STAR_CWSP

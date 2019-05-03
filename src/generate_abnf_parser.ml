@@ -88,6 +88,7 @@ let rules = [
     (String.concat "," nts)
     (nts |> List.map (fun _ -> "mk_nt()") |> String.concat ",")
     s;
-  print_endline
+  print_endline "";
+  ()
 
 let main () = pretty_print ()

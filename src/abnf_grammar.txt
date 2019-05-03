@@ -9,17 +9,17 @@ RULELIST ->
 
 RULELIST_ELT -> 
   RULE                                               {{ RE_RULE(x1) }}
-(*  | STAR_CWSP_CNL                                  {{ RE_CWSP_CNL(c x1) }} *)
-  | ?wsplus?                                         {{ RE_CWSP_CNL(c x1) }}  
+(*  | STAR_CWSP_CNL                                  {{ RE_CWSP_CNL(x1) }} *)
+  | ?wsplus?                                         {{ RE_CWSP_CNL(x1) }}  
 (* FIXME this change avoids ambiguity but doesn't allow isolated comments *)
 
 STAR_CWSP_CNL -> (* can start with ws *)
   CNL                                                {{ x1 }}
   | CWSP STAR_CWSP_CNL                               {{ string_concat [x1;x2] }}
 
-RULE -> RULENAME DEFINED_AS ELEMENTS CNL             {{ RULE(x1,x2,x3,c x4) }}
+RULE -> RULENAME DEFINED_AS ELEMENTS CNL             {{ RULE(x1,x2,x3,x4) }}
 
-RULENAME -> ?rulename?                               {{ RULENAME (c x1) }}
+RULENAME -> ?rulename?                               {{ RULENAME x1 }}
 
 (* can start with ws *)
 DEFINED_AS -> 
