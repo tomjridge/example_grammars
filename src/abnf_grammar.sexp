@@ -1,13 +1,13 @@
 ((S ((((Tm (Tm_qu ws)) (Nt RULELIST) (Tm (Tm_qu ws))) " x2 ")))
  (RULELIST
-  ((((Nt RULELIST_ELT)) " RULELIST[x1] ")
-   (((Nt RULELIST_ELT) (Nt RULELIST))
-    " match x2 with RULELIST(xs) -> RULELIST(x1 :: xs) ")))
+  ((((Nt RULELIST_ELT) (Nt RULELIST))
+    " match x2 with RULELIST(xs) -> RULELIST(x1 :: xs) ")
+   (((Nt RULELIST_ELT)) " RULELIST[x1] ")))
  (RULELIST_ELT
   ((((Nt RULE)) " RE_RULE(x1) ") (((Tm (Tm_qu wsplus))) " RE_CWSP_CNL(x1) ")))
  (STAR_CWSP_CNL
-  ((((Nt CNL)) " x1 ")
-   (((Nt CWSP) (Nt STAR_CWSP_CNL)) " string_concat [x1;x2] ")))
+  ((((Nt CWSP) (Nt STAR_CWSP_CNL)) " string_concat [x1;x2] ")
+   (((Nt CNL)) " x1 ")))
  (RULE
   ((((Nt RULENAME) (Nt DEFINED_AS) (Nt ELEMENTS) (Nt CNL))
     " RULE(x1,x2,x3,x4) ")))
@@ -15,39 +15,39 @@
  (DEFINED_AS
   ((((Nt STAR_CWSP) (Nt EQUAL_OR_EQUAL_SLASH) (Nt STAR_CWSP)) " x2 ")))
  (STAR_CWSP
-  ((((Tm (Tm_qu eps))) " () ") (((Nt CWSP) (Nt STAR_CWSP)) " () ")))
+  ((((Nt CWSP) (Nt STAR_CWSP)) " () ") (((Tm (Tm_qu eps))) " () ")))
  (EQUAL_OR_EQUAL_SLASH
-  ((((Tm (Tm_lit ("\"" = "\"")))) " DAS_EQUAL ")
-   (((Tm (Tm_lit ("\"" =/ "\"")))) " DAS_EQUAL_SLASH ")))
+  ((((Tm (Tm_lit ("\"" =/ "\"")))) " DAS_EQUAL_SLASH ")
+   (((Tm (Tm_lit ("\"" = "\"")))) " DAS_EQUAL ")))
  (ELEMENTS ((((Nt ALTERNATION) (Nt STAR_CWSP)) " ELEMENTS(x1) ")))
  (CWSP
-  ((((Tm (Tm_qu wsp))) " x1 ")
-   (((Nt CNL) (Tm (Tm_qu wsp))) " string_concat [x1;x2] ")))
+  ((((Nt CNL) (Tm (Tm_qu wsp))) " string_concat [x1;x2] ")
+   (((Tm (Tm_qu wsp))) " x1 ")))
  (CNL ((((Nt COMMENT)) " x1 ") (((Tm (Tm_qu crlf))) " x1 ")))
  (COMMENT
   ((((Tm (Tm_lit ("\"" ";" "\""))) (Nt STAR_WSP_VCHAR) (Tm (Tm_qu crlf)))
     " string_concat [x1;x2;x3] ")))
  (STAR_WSP_VCHAR
-  ((((Tm (Tm_qu eps))) " x1 ")
+  ((((Tm (Tm_qu vchar)) (Nt STAR_WSP_VCHAR)) " string_concat [x1;x2] ")
    (((Tm (Tm_qu wsp)) (Nt STAR_WSP_VCHAR)) " string_concat [x1;x2] ")
-   (((Tm (Tm_qu vchar)) (Nt STAR_WSP_VCHAR)) " string_concat [x1;x2] ")))
+   (((Tm (Tm_qu eps))) " x1 ")))
  (ALTERNATION
   ((((Nt CONCATENATION) (Nt STAR_ALTERNATION_REST)) " ALTERNATION(x1::x2) ")))
  (STAR_ALTERNATION_REST
-  ((((Tm (Tm_qu eps))) " [] ")
-   (((Nt STAR_CWSP) (Tm (Tm_lit ("\"" / "\""))) (Nt STAR_CWSP)
+  ((((Nt STAR_CWSP) (Tm (Tm_lit ("\"" / "\""))) (Nt STAR_CWSP)
      (Nt CONCATENATION) (Nt STAR_ALTERNATION_REST))
-    " x4::x5 ")))
+    " x4::x5 ")
+   (((Tm (Tm_qu eps))) " [] ")))
  (CONCATENATION
   ((((Nt REPETITION) (Nt STAR_CONCATENATION_REST)) " CONCATENATION(x1::x2) ")))
  (STAR_CONCATENATION_REST
-  ((((Tm (Tm_qu eps))) " [] ")
-   (((Nt ONE_STAR_CWSP) (Nt REPETITION) (Nt STAR_CONCATENATION_REST))
-    " x2::x3 ")))
+  ((((Nt ONE_STAR_CWSP) (Nt REPETITION) (Nt STAR_CONCATENATION_REST))
+    " x2::x3 ")
+   (((Tm (Tm_qu eps))) " [] ")))
  (ONE_STAR_CWSP ((((Nt CWSP) (Nt STAR_CWSP)) " () ")))
  (REPETITION
-  ((((Nt ELEMENT)) " REP(None,x1) ")
-   (((Nt REPEAT) (Nt ELEMENT)) " REP(Some(x1),x2) ")))
+  ((((Nt REPEAT) (Nt ELEMENT)) " REP(Some(x1),x2) ")
+   (((Nt ELEMENT)) " REP(None,x1) ")))
  (REPEAT ((((Tm (Tm_qu repeat))) " REPEAT ")))
  (ELEMENT
   ((((Nt RULENAME)) " EL_RULENAME x1 ") (((Nt GROUP)) " EL_GROUP x1 ")

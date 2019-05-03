@@ -143,14 +143,14 @@ let _NUM_VAL_REST,_CWSP,_PROSE_VAL,_REPEAT,_CHAR_VAL,_ALTERNATION,_REPETITION,_E
 let rules = [
 _S -->_3 (ws,nt _RULELIST,ws)    (fun (x1,x2,x3) ->  x2 );
 
-_RULELIST -->_1 (nt _RULELIST_ELT)    (fun x1 ->  RULELIST[x1] );
 _RULELIST -->_2 (nt _RULELIST_ELT,nt _RULELIST)    (fun (x1,x2) ->  match x2 with RULELIST(xs) -> RULELIST(x1 :: xs) );
+_RULELIST -->_1 (nt _RULELIST_ELT)    (fun x1 ->  RULELIST[x1] );
 
 _RULELIST_ELT -->_1 (nt _RULE)    (fun x1 ->  RE_RULE(x1) );
 _RULELIST_ELT -->_1 (wsplus)    (fun x1 ->  RE_CWSP_CNL(x1) );
 
-_STAR_CWSP_CNL -->_1 (nt _CNL)    (fun x1 ->  x1 );
 _STAR_CWSP_CNL -->_2 (nt _CWSP,nt _STAR_CWSP_CNL)    (fun (x1,x2) ->  string_concat [x1;x2] );
+_STAR_CWSP_CNL -->_1 (nt _CNL)    (fun x1 ->  x1 );
 
 _RULE -->_4 (nt _RULENAME,nt _DEFINED_AS,nt _ELEMENTS,nt _CNL)    (fun (x1,x2,x3,x4) ->  RULE(x1,x2,x3,x4) );
 
@@ -158,40 +158,40 @@ _RULENAME -->_1 (rulename)    (fun x1 ->  RULENAME x1 );
 
 _DEFINED_AS -->_3 (nt _STAR_CWSP,nt _EQUAL_OR_EQUAL_SLASH,nt _STAR_CWSP)    (fun (x1,x2,x3) ->  x2 );
 
-_STAR_CWSP -->_1 (eps)    (fun x1 ->  () );
 _STAR_CWSP -->_2 (nt _CWSP,nt _STAR_CWSP)    (fun (x1,x2) ->  () );
+_STAR_CWSP -->_1 (eps)    (fun x1 ->  () );
 
-_EQUAL_OR_EQUAL_SLASH -->_1 (a"=")    (fun x1 ->  DAS_EQUAL );
 _EQUAL_OR_EQUAL_SLASH -->_1 (a"=/")    (fun x1 ->  DAS_EQUAL_SLASH );
+_EQUAL_OR_EQUAL_SLASH -->_1 (a"=")    (fun x1 ->  DAS_EQUAL );
 
 _ELEMENTS -->_2 (nt _ALTERNATION,nt _STAR_CWSP)    (fun (x1,x2) ->  ELEMENTS(x1) );
 
-_CWSP -->_1 (wsp)    (fun x1 ->  x1 );
 _CWSP -->_2 (nt _CNL,wsp)    (fun (x1,x2) ->  string_concat [x1;x2] );
+_CWSP -->_1 (wsp)    (fun x1 ->  x1 );
 
 _CNL -->_1 (nt _COMMENT)    (fun x1 ->  x1 );
 _CNL -->_1 (crlf)    (fun x1 ->  x1 );
 
 _COMMENT -->_3 (a";",nt _STAR_WSP_VCHAR,crlf)    (fun (x1,x2,x3) ->  string_concat [x1;x2;x3] );
 
-_STAR_WSP_VCHAR -->_1 (eps)    (fun x1 ->  x1 );
-_STAR_WSP_VCHAR -->_2 (wsp,nt _STAR_WSP_VCHAR)    (fun (x1,x2) ->  string_concat [x1;x2] );
 _STAR_WSP_VCHAR -->_2 (vchar,nt _STAR_WSP_VCHAR)    (fun (x1,x2) ->  string_concat [x1;x2] );
+_STAR_WSP_VCHAR -->_2 (wsp,nt _STAR_WSP_VCHAR)    (fun (x1,x2) ->  string_concat [x1;x2] );
+_STAR_WSP_VCHAR -->_1 (eps)    (fun x1 ->  x1 );
 
 _ALTERNATION -->_2 (nt _CONCATENATION,nt _STAR_ALTERNATION_REST)    (fun (x1,x2) ->  ALTERNATION(x1::x2) );
 
-_STAR_ALTERNATION_REST -->_1 (eps)    (fun x1 ->  [] );
 _STAR_ALTERNATION_REST -->_5 (nt _STAR_CWSP,a"/",nt _STAR_CWSP,nt _CONCATENATION,nt _STAR_ALTERNATION_REST)    (fun (x1,x2,x3,x4,x5) ->  x4::x5 );
+_STAR_ALTERNATION_REST -->_1 (eps)    (fun x1 ->  [] );
 
 _CONCATENATION -->_2 (nt _REPETITION,nt _STAR_CONCATENATION_REST)    (fun (x1,x2) ->  CONCATENATION(x1::x2) );
 
-_STAR_CONCATENATION_REST -->_1 (eps)    (fun x1 ->  [] );
 _STAR_CONCATENATION_REST -->_3 (nt _ONE_STAR_CWSP,nt _REPETITION,nt _STAR_CONCATENATION_REST)    (fun (x1,x2,x3) ->  x2::x3 );
+_STAR_CONCATENATION_REST -->_1 (eps)    (fun x1 ->  [] );
 
 _ONE_STAR_CWSP -->_2 (nt _CWSP,nt _STAR_CWSP)    (fun (x1,x2) ->  () );
 
-_REPETITION -->_1 (nt _ELEMENT)    (fun x1 ->  REP(None,x1) );
 _REPETITION -->_2 (nt _REPEAT,nt _ELEMENT)    (fun (x1,x2) ->  REP(Some(x1),x2) );
+_REPETITION -->_1 (nt _ELEMENT)    (fun x1 ->  REP(None,x1) );
 
 _REPEAT -->_1 (repeat)    (fun x1 ->  REPEAT );
 

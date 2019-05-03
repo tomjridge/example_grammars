@@ -67,7 +67,8 @@ module Grammar_of_grammars = struct
   let syms_act = syms -- ws -- action >>= (fun ((x,_),y) -> return (x,y))
 
   (* the rhs is a sequence of syms_act *)
-  let rhs = plus ~sep:(ws -- a"|" -- ws) syms_act
+  let rhs = (opt (a"|" -- ws)) -- (plus ~sep:(ws -- a"|" -- ws) syms_act)
+        >>= fun (a,b) -> return b
 
   let rule = 
     (* debug ~msg:"XXXruleXXX" () >>= fun _ ->  *)
