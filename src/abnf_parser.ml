@@ -41,9 +41,11 @@ module type INTERNAL_REQS = sig
   val ( --> ) : 'a nt -> 'a rhs -> rule
   val nt : 'a nt -> 'a sym
 
+(*
   type 'a grammar 
   val grammar: name:string -> descr:string -> initial_nt:'a nt ->
     rules:rule list -> 'a grammar
+*)
 
   (** for defining terminals without exposing the sym types, we have
      an extra argument to convert a string regexp into a (terminal)
@@ -231,11 +233,12 @@ _PROSE_VAL -->_3 (a"<",prose_val_chars,a">")    (fun (x1,x2,x3) ->  x2 );
 
 let _ : rulelist nt = _S
 
+(*
 (** Wrap up the result and export *)
 let grammar = Reqs.grammar ~name:"ABNF" ~descr:("ABNF parser, see "^__FILE__)
     ~initial_nt:_S
     ~rules
-
+*)
 end
 
 
@@ -259,6 +262,7 @@ module Internal2 = struct
   module Reqs = struct
     include Typed_syms
 
+    (*
     (** To store the defns of nts *)
     type 'z rhs = 
       | Rhs1: 'a sym * ('a -> 'z) -> 'z rhs
@@ -266,9 +270,20 @@ module Internal2 = struct
       | Rhs3: ('a sym * 'b sym * 'c sym) * ('a * 'b * 'c -> 'z) -> 'z rhs
       | Rhs4: ('a sym * 'b sym * 'c sym * 'd sym) * ('a * 'b * 'c * 'd -> 'z) -> 'z rhs
       | Rhs5: ('a sym * 'b sym * 'c sym * 'd sym * 'e sym) * ('a * 'b * 'c * 'd * 'e -> 'z) -> 'z rhs
+*)
+
+
+    type univ
+(*
+    let to_univ: 'a rhs list -> univ = fun x -> Obj.magic x
+    let from_univ: univ -> 'a rhs list = fun x -> Obj.magic x
+*)
+
+    type 'a rhs = univ sym list * (univ list -> univ)
 
     type rule = unit (* Rule: 'a nt * 'a rhs -> rule ; we mutate 'a nt directly *)
 
+(*
     include struct
       (* open P0_lib *)
       let _1 s f = Rhs1(s,f)
@@ -277,20 +292,41 @@ module Internal2 = struct
       let _4 ss f = Rhs4(ss,f)
       let _5 ss f = Rhs5(ss,f)
     end
+*)
 
-    type univ
-    let to_univ: 'a rhs list -> univ = fun x -> Obj.magic x
-    let from_univ: univ -> 'a rhs list = fun x -> Obj.magic x
+    module Underscores : sig 
+      val _1: 'a sym -> ('a -> 'z) -> 'z rhs
+      val _2: ('a sym * 'b sym) -> ('a * 'b -> 'z) -> 'z rhs
+      val _3: ('a sym * 'b sym * 'c sym) -> ('a * 'b * 'c -> 'z) -> 'z rhs
+      val _4: ('a sym * 'b sym * 'c sym * 'd sym) -> ('a * 'b * 'c * 'd -> 'z) -> 'z rhs
+      val _5: ('a sym * 'b sym * 'c sym * 'd sym * 'e sym) -> ('a * 'b * 'c * 'd * 'e -> 'z) -> 'z rhs
+    end = struct
+      let _1 : 'a sym -> ('a -> 'z) -> 'z rhs = fun s f -> 
+        [Obj.magic s],
+        fun [u1] -> Obj.magic (f (Obj.magic u1))
+      let _2 = fun (s1,s2) f -> 
+        [Obj.magic s1;Obj.magic s2],
+        fun [u1;u2] -> Obj.magic (f (Obj.magic u1, Obj.magic u2))
+      let _3 (s1,s2,s3) f = 
+        [Obj.magic s1; Obj.magic s2; Obj.magic s3],
+        fun [u1;u2;u3] -> Obj.magic (f (Obj.magic u1, Obj.magic u2, Obj.magic u3))
+      let _4 (s1,s2,s3,s4) f = 
+        [Obj.magic s1; Obj.magic s2; Obj.magic s3; Obj.magic s4],
+        fun [u1;u2;u3;u4] -> Obj.magic (f (Obj.magic u1, Obj.magic u2, Obj.magic u3, Obj.magic u4))
+      let _5 (s1,s2,s3,s4,s5) f = 
+        [Obj.magic s1; Obj.magic s2; Obj.magic s3; Obj.magic s4; Obj.magic s5],
+        fun [u1;u2;u3;u4;u5] -> Obj.magic (f (Obj.magic u1, Obj.magic u2, Obj.magic u3, Obj.magic u4, Obj.magic u5))
+    end
+    include Underscores
 
     let tbl = Hashtbl.create 100    
 
-    (* this is where we have to define an 'a m in terms of the rhs *)
     let ( --> ) (type a) (nt:a nt) (rhs:a rhs) : unit = 
       let rhss = Hashtbl.find_opt tbl nt |> function
         | None -> []
-        | Some rhss -> (from_univ rhss : a rhs list)
+        | Some rhss -> (rhss : a rhs list)
       in
-      Hashtbl.replace tbl nt (to_univ(rhss@[rhs]))
+      Hashtbl.replace tbl nt (rhss@[rhs])
 
     let nt (nt:'a nt) : 'a sym = Nt nt
 
@@ -301,29 +337,42 @@ module Internal2 = struct
     let regexp_string_to_tm s = Tm (P0_lib.Str_.re s)
 
     open P0_lib 
-    let rec nt_to_parser (type a) (nt:a nt) : a P0_lib.m = 
-      (* we look up the rhss in the hashtbl, and convert to a parser *)
-      let rhss : a rhs list = 
-        Hashtbl.find_opt tbl nt |> Obj.magic |> function
-        | None -> []
-        | Some rhss -> rhss
-      in
-      (* FIXME in the following it would be nicer if we had a list of
-         sym and an action that took a list *)
-      let rhs_to_parser = function
-        | Rhs1 (s,f) -> (a"" >>= fun _ -> 
-            match s with
-            | Nt nt -> nt_to_parser nt >>= fun x -> return (f (Obj.magic x))
-            | Tm p -> p >>= fun x -> return (f (Obj.magic x)))
-      in
-      let rec alts = function
-        | [] -> of_fun (fun s -> None)
-        | [rhs] -> rhs_to_parser rhs
-        | rhs::rest -> (rhs_to_parser rhs) || (alts rest)
-      in
-      alts rhss
+    
+    module Internal3 = struct
+      let rec nt_to_parser (nt:univ nt) : univ P0_lib.m = 
+        (* we look up the rhss in the hashtbl, and convert to a parser *)
+        let rhss : univ rhs list = 
+          Hashtbl.find_opt tbl nt |> function
+          | None -> []
+          | Some rhss -> rhss
+        in
+        (* FIXME in the following it would be nicer if we had a list of
+           sym and an action that took a list *)
+        let rhs_to_parser (rhs:univ rhs) : univ P0_lib.m = match rhs with
+          | syms,act -> (a"" >>= fun _ -> 
+              syms |> List.map sym_to_parser |> fun ps ->
+              P0_lib.sequence ps >>= fun xs -> 
+              let r = act xs in
+              let _ = r in  (* NOTE univ *)
+              return (Obj.magic r))
+        in
+        let rec alts = function
+          | [] -> of_fun (fun s -> None)
+          | [rhs] -> rhs_to_parser rhs
+          | rhs::rest -> (rhs_to_parser rhs) || (alts rest)
+        in
+        let r = alts rhss in
+        let _ = r in
+        r
+      and sym_to_parser = function
+        | Nt nt -> nt_to_parser nt
+        | Tm p -> Obj.magic p
 
-    let _ = nt_to_parser
+      let _ = nt_to_parser
+    end
+
+    let nt_to_parser : 'a nt -> 'a P0_lib.m = 
+      fun nt -> Obj.magic (Internal3.nt_to_parser nt)
 
   end
   module Internal_instance = Internal(Reqs)
@@ -355,4 +404,6 @@ let test () =
 address         = "(" addr-name SP addr-adl SP addr-mailbox SP
                   addr-host ")"
 |}
-  |> fun (Some(_,rest)) -> Printf.printf "Remaining input: %s  (%s)\n%!" rest __FILE__
+  |> function
+| None -> failwith __LOC__
+| (Some(_,rest)) -> Printf.printf "Remaining input: %s  (%s)\n%!" rest __FILE__
