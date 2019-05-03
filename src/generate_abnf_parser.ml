@@ -12,31 +12,37 @@ include struct
 end
 
 (** Generate fun clause: fun ((x1,x2),x3) -> ... *)
-let rec _x n = match n with
+let _x = 
+  let rec xs = function 
+    | 1 -> "x1"
+    | n -> Printf.sprintf "%s,x%d" (xs (n-1)) n
+  in
+  function 
   | 1 -> "x1"
-  | _ -> _x (n-1) |> fun left ->
-         Printf.sprintf "(%s,x%d)" left n
+  | n -> Printf.sprintf "(%s)" (xs n)
 
 (** Generate an ABNF parser *)
 let pretty_print () = 
-  let tbl = Hashtbl.create 100 in
+  let tbl_nts = Hashtbl.create 100 in
+  let tbl_tms = Hashtbl.create 100 in (* not including literals a"..." *)
   let open Parse_abnf_grammar_txt.Grammar_type in
   abnf_export |> List.map (fun (nt,syms_act_list) -> 
-    let pp_nt nt = 
+    let pp_nt ?(add_nt_prefix=true) nt = 
       "_"^nt |> fun s ->
-      Hashtbl.replace tbl s ();
-      s
+      Hashtbl.replace tbl_nts s ();
+      (if add_nt_prefix then "nt " else "")^s
     in
     let pp_tm = function
       | Tm_lit (s1,s2,s3) -> s1^s2^s3 |> fun c -> Printf.sprintf "a%s" c
-      | Tm_qu s -> s  (* FIXME may want to remove q marks *)
+      | Tm_qu s -> 
+        Hashtbl.replace tbl_tms s ();
+        s  
     in
     let pp_sym = function
       | Nt nt -> pp_nt nt
       | Tm tm -> pp_tm tm
     in
     let pp_syms = function
-      | [sym] -> pp_sym sym
       | syms -> syms |> List.map pp_sym |> String.concat "," |> fun s -> "("^s^")" in
     let pp_act n s = Printf.sprintf "(fun %s -> %s)" (_x n) s  in
     let pp_syms_act (syms,act) = 
@@ -46,22 +52,42 @@ let pretty_print () =
     in
     let rec pp_rule (nt,rhss) = rhss |> List.map (fun rhs -> pp_rule' (nt,rhs)) |> String.concat "\n"
     and pp_rule' (nt,(syms,act)) = 
-      Printf.sprintf "%s -->_%d %s;" (pp_nt nt) (List.length syms) (pp_syms_act (syms,act))
+      Printf.sprintf "%s -->_%d %s;" 
+        (pp_nt ~add_nt_prefix:false nt)   (* NOTE just print raw on lhs *)
+        (List.length syms) 
+        (pp_syms_act (syms,act))
     in
     pp_rule (nt,syms_act_list))
   |> String.concat "\n\n"
   |> fun s ->
-  Hashtbl.to_seq_keys tbl |> List.of_seq |> fun nts -> 
+  Hashtbl.to_seq_keys tbl_nts |> List.of_seq |> fun nts -> 
+  Hashtbl.to_seq_keys tbl_tms |> List.of_seq |> fun tms -> 
   Printf.printf {|
 (** NOTE this is generated code, see %s*)
 
-let %s = %s in
-[
+(** NOTE terminals:
+%s
+*)
+
+(** NOTE nonterminals:
+%s
+*)
+
+(** Non-terminals *)
+let %s = %s 
+
+
+(** Rules *)
+let rules = [
 %s
 ]
 |}
     __FILE__
+    (String.concat "\n" tms)
+    (String.concat "\n" nts)
     (String.concat "," nts)
     (nts |> List.map (fun _ -> "mk_nt()") |> String.concat ",")
     s;
   print_endline
+
+let main () = pretty_print ()

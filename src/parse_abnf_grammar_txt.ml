@@ -47,8 +47,9 @@ module Grammar_of_grammars = struct
      (a dq -- upto_a dq -- a dq))
     >>= fun ((q1,s),q2) -> Tm_lit (q1,s,q2) |> return
 
-  let tm_re = re Re.(seq [char '?';rep1 (alt [alnum;char '_';char '?'])]) >>= fun s ->
-    Tm_qu s |> return
+  let tm_re = 
+    a"?" -- re Re.(rep1 (alt [alnum;char '_'])) -- a"?" >>= fun ((_,s),_) ->
+    return (Tm_qu s)
 
   let tm = tm_lit || tm_re
 
@@ -91,6 +92,11 @@ end
 open Grammar_of_grammars
 
 open Core_kernel
+
+let main () = 
+  P0_lib.to_fun grammar Blobs.abnf_grammar_txt |> fun (Some(g,"")) -> 
+  g |> export_to_string |> fun str -> 
+  print_endline str
 
 let test () = 
   P0_lib.to_fun grammar Blobs.abnf_grammar_txt |> fun (Some(g,"")) -> 

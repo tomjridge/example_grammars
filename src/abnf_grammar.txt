@@ -1,4 +1,4 @@
-S -> ?ws? RULELIST ?ws? ?eof?                        {{ x2 |> sexp_of_rulelist |> Sexplib.Sexp.to_string_hum |> print_endline }}
+S -> ?ws? RULELIST ?ws?                              {{ x2 }}
 
 (* ambiguity in rfc 2234: <<r = a b c \n ; comment>> 
 the comment can attach to elements or be a separate rulelist_elt *)
@@ -15,7 +15,7 @@ RULELIST_ELT ->
 
 STAR_CWSP_CNL -> (* can start with ws *)
   CNL                                                {{ x1 }}
-  | CWSP STAR_CWSP_CNL                               {{ ss_concat [x1;x2] |> dest_Some }}
+  | CWSP STAR_CWSP_CNL                               {{ string_concat [x1;x2] }}
 
 RULE -> RULENAME DEFINED_AS ELEMENTS CNL             {{ RULE(x1,x2,x3,c x4) }}
 
@@ -39,19 +39,19 @@ ELEMENTS -> ALTERNATION STAR_CWSP                    {{ ELEMENTS(x1) }}
 (* can start with whitespace *)
 CWSP -> 
   ?wsp?                                              {{ x1 }}
-  | CNL ?wsp?                                        {{ ss_concat [x1;x2] |> dest_Some }}
+  | CNL ?wsp?                                        {{ string_concat [x1;x2] }}
 
 CNL -> 
   COMMENT                                            {{ x1 }}
   | ?crlf?                                           {{ x1 }}
 
-COMMENT -> ";" STAR_WSP_VCHAR ?crlf?                 {{ ss_concat [x1;x2;x3] |> dest_Some }}
+COMMENT -> ";" STAR_WSP_VCHAR ?crlf?                 {{ string_concat [x1;x2;x3] }}
 
 (* can start with whitespace *)
 STAR_WSP_VCHAR -> 
   ?eps?                                              {{ x1 }}
-  | ?wsp? STAR_WSP_VCHAR                             {{ ss_concat [x1;x2] |> dest_Some }}
-  | ?vchar? STAR_WSP_VCHAR                           {{ ss_concat [x1;x2] |> dest_Some }}
+  | ?wsp? STAR_WSP_VCHAR                             {{ string_concat [x1;x2] }}
+  | ?vchar? STAR_WSP_VCHAR                           {{ string_concat [x1;x2] }}
 
 ALTERNATION -> CONCATENATION STAR_ALTERNATION_REST   {{ ALTERNATION(x1::x2) }}
 
@@ -90,19 +90,19 @@ OPTION -> "[" STAR_CWSP ALTERNATION STAR_CWSP "]"    {{ OPTION(x3) }}
 (*char-val       =  DQUOTE *(%x20-21 / %x23-7E) DQUOTE
                                ; quoted string of SP and VCHAR
                                ; without DQUOTE *)
-CHAR_VAL -> ?dquote? ?char_vals? ?dquote?            {{ ss_concat [x1;x2;x3] |> dest_Some }}
+CHAR_VAL -> ?dquote? ?char_vals? ?dquote?            {{ string_concat [x1;x2;x3] }}
 
-NUM_VAL -> "%" NUM_VAL_REST                          {{ ss_concat [x1;x2] |> dest_Some }}
+NUM_VAL -> "%" NUM_VAL_REST                          {{ string_concat [x1;x2] }}
 
 NUM_VAL_REST ->
   BIN_VAL                                            {{ x1 }}
   | DEC_VAL                                          {{ x1 }}
   | HEX_VAL                                          {{ x1 }}
 
-BIN_VAL -> "b" ?one_star_bit? ?bin_val_rest?         {{ ss_concat [x1;x2;x3] |> dest_Some }}
+BIN_VAL -> "b" ?one_star_bit? ?bin_val_rest?         {{ string_concat [x1;x2;x3] }}
 
-DEC_VAL -> "d" ?one_star_digit? ?dec_val_rest?       {{ ss_concat [x1;x2;x3] |> dest_Some }}
+DEC_VAL -> "d" ?one_star_digit? ?dec_val_rest?       {{ string_concat [x1;x2;x3] }}
 
-HEX_VAL -> "x" ?one_star_hexdig? ?hex_val_rest?      {{ ss_concat [x1;x2;x3] |> dest_Some }}
+HEX_VAL -> "x" ?one_star_hexdig? ?hex_val_rest?      {{ string_concat [x1;x2;x3] }}
 
 PROSE_VAL -> "<" ?prose_val_chars? ">"               {{ x2 }}
