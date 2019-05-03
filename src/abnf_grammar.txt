@@ -1,3 +1,11 @@
+(* Specification of ABNF syntax. 
+
+This follows RFC2234 closely (except that we desugar lists etc). We
+probably have to refactor to get rid of the ambiguities with
+whitespace etc and the need to preferentially parse longer spans.
+
+*)
+
 S -> ?ws? RULELIST ?ws?                              {{ x2 }}
 
 (* ambiguity in rfc 2234: <<r = a b c \n ; comment>> 
@@ -11,12 +19,20 @@ RULELIST_ELT ->
   RULE                                               {{ RE_RULE(x1) }}
 (*  | STAR_CWSP_CNL                                  {{ RE_CWSP_CNL(x1) }} *)
   | ?wsplus?                                         {{ RE_CWSP_CNL(x1) }}  
-(* FIXME this change avoids ambiguity but doesn't allow isolated comments *)
+(* FIXME this change avoids ambiguity but doesn't allow isolated comments 
+NOTE that allowing wsplus at end is a bit awful
+*)
 
-STAR_CWSP_CNL -> (* can start with ws *)
+(* NOTE can start with ws; a bit horrible; CNL is "comment or
+new-line"; CWSP is opt(CNL) ?wsp?; STAR_CWSP_CNL is (whitespace and
+comment)s followed by CNL *)
+STAR_CWSP_CNL -> 
   CNL                                                {{ x1 }}
   | CWSP STAR_CWSP_CNL                               {{ string_concat [x1;x2] }}
 
+(* NOTE in the following we should probably lift the ws to between the nonterms; 
+- ELEMENTS are the definiendum of the RULE; 
+- DEFINED_AS is whether to append to nt or define a new nt *)
 RULE -> RULENAME DEFINED_AS ELEMENTS CNL             {{ RULE(x1,x2,x3,x4) }}
 
 RULENAME -> ?rulename?                               {{ RULENAME x1 }}
@@ -34,6 +50,7 @@ EQUAL_OR_EQUAL_SLASH ->
   "="                                                {{ DAS_EQUAL }}
   | "=/"                                             {{ DAS_EQUAL_SLASH }}
 
+(* ELEMENTS is just an ALTERNATION followed by cwsp-s *)
 ELEMENTS -> ALTERNATION STAR_CWSP                    {{ ELEMENTS(x1) }}
 
 (* can start with whitespace *)
@@ -47,12 +64,13 @@ CNL ->
 
 COMMENT -> ";" STAR_WSP_VCHAR ?crlf?                 {{ string_concat [x1;x2;x3] }}
 
-(* can start with whitespace *)
+(* can start with whitespace; vchar is "visible char"? *)
 STAR_WSP_VCHAR -> 
   ?eps?                                              {{ x1 }}
   | ?wsp? STAR_WSP_VCHAR                             {{ string_concat [x1;x2] }}
   | ?vchar? STAR_WSP_VCHAR                           {{ string_concat [x1;x2] }}
 
+(* a sequence of concatentations, separated by "/" *)
 ALTERNATION -> CONCATENATION STAR_ALTERNATION_REST   {{ ALTERNATION(x1::x2) }}
 
 (* can start with ws *)
@@ -61,8 +79,10 @@ STAR_ALTERNATION_REST ->
   | STAR_CWSP "/" 
     STAR_CWSP CONCATENATION STAR_ALTERNATION_REST    {{ x4::x5 }}
 
+(* REPETITION is an element with an optional repeat prefix *)
 CONCATENATION -> REPETITION STAR_CONCATENATION_REST  {{ CONCATENATION(x1::x2) }}
 
+(* tail of a concatentation... an optional concatentation *)
 STAR_CONCATENATION_REST -> 
   ?eps?                                              {{ [] }}
   | ONE_STAR_CWSP REPETITION STAR_CONCATENATION_REST {{ x2::x3 }}
@@ -75,6 +95,8 @@ REPETITION ->
 
 REPEAT -> ?repeat?                                   {{ REPEAT }}
 
+(* The different types of element forming part of the rule
+definiendum; fairly self-explanatory *)
 ELEMENT ->
   RULENAME                                           {{ EL_RULENAME x1 }}
   | GROUP                                            {{ EL_GROUP x1 }}
