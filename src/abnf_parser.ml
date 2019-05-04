@@ -429,7 +429,8 @@ open P0_lib
 
 let test () = 
   to_fun _S {|address         = "(" addr-name SP addr-adl SP addr-mailbox SP
-                  addr-host ")"|}
+                  addr-host ")"
+|}
   |> function
 | None -> failwith __LOC__
 | (Some(_,rest)) -> Printf.printf "Remaining input: %s  (%s)\n%!" rest __FILE__
