@@ -151,7 +151,7 @@ let _ = print_endline "pre rules evaluated"
 
 let debug ?(msg="") p = P0_lib.(
     of_fun (fun s -> 
-        Printf.printf "debug called; msg=%s; input=%s\n%!" msg s;
+        Printf.printf "debug called; msg=%s; input=>>%s<<\n%!" msg s;
         to_fun p s))
 
 (** Rules *)
@@ -161,8 +161,8 @@ _S --> debug ~msg:"_S" (_3 (ws,nt _RULELIST,ws)    (fun (x1,x2,x3) ->  x2 ));
 _RULELIST -->_2 (nt _RULELIST_ELT,nt _RULELIST)    (fun (x1,x2) ->  match x2 with RULELIST(xs) -> RULELIST(x1 :: xs) );
 _RULELIST -->_1 (nt _RULELIST_ELT)    (fun x1 ->  RULELIST[x1] );
 
-_RULELIST_ELT -->_1 (nt _RULE)    (fun x1 ->  RE_RULE(x1) );
-_RULELIST_ELT -->_1 (wsplus)    (fun x1 ->  RE_CWSP_CNL(x1) );
+_RULELIST_ELT --> debug ~msg:"_RL1" (_1 (nt _RULE)    (fun x1 ->  RE_RULE(x1) ));
+_RULELIST_ELT --> debug ~msg:"_RL2" (_1 (wsplus)    (fun x1 ->  RE_CWSP_CNL(x1) ));
 
 _STAR_CWSP_CNL -->_2 (nt _CWSP,nt _STAR_CWSP_CNL)    (fun (x1,x2) ->  string_concat [x1;x2] );
 _STAR_CWSP_CNL -->_1 (nt _CNL)    (fun x1 ->  x1 );
@@ -223,7 +223,7 @@ _GROUP -->_5 (a"(",nt _STAR_CWSP,nt _ALTERNATION,nt _STAR_CWSP,a")")    (fun (x1
 
 _OPTION -->_5 (a"[",nt _STAR_CWSP,nt _ALTERNATION,nt _STAR_CWSP,a"]")    (fun (x1,x2,x3,x4,x5) ->  OPTION(x3) );
 
-_CHAR_VAL -->_3 (dquote,char_vals,dquote)    (fun (x1,x2,x3) ->  string_concat [x1;x2;x3] );
+_CHAR_VAL --> debug ~msg:"_CHAR_VAL" (_3 (dquote,char_vals,dquote)    (fun (x1,x2,x3) ->  string_concat [x1;x2;x3] ));
 
 _NUM_VAL -->_2 (a"%",nt _NUM_VAL_REST)    (fun (x1,x2) ->  string_concat [x1;x2] );
 
