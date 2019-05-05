@@ -86,7 +86,8 @@ let rules = [
     (String.concat "\n" tms)
     (String.concat "\n" nts)
     (String.concat "," nts)
-    (nts |> List.map (fun _ -> "mk_nt()") |> String.concat ",")
+    (nts |> List.map (fun nt ->
+         Printf.sprintf {|mk_nt "%s"|} nt) |> String.concat ",")
     s;
   print_endline "";
   ()

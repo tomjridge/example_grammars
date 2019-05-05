@@ -6,3 +6,4 @@ resources
 Makefile.local
 /example_grammars.install
 /src/.merlin
+/bin/.merlin
