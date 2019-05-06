@@ -77,10 +77,10 @@ let pretty_print () =
 let %s = %s 
 
 
-(** Rules *)
-let rules = [
+(** Rules; NOTE these have to be added in the given order due to short-circuit alternatives *)
+let  = begin
 %s
-]
+end
 |}
     __FILE__
     (String.concat "\n" tms)

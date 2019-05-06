@@ -4,6 +4,8 @@ module State = struct
   type t = { input:string; debug:(string*string) list }  
   (** debug field is the stack of current executing parsers, and the
      input they were called on *)
+
+  let empty_state = { input=""; debug=[] }
 end
 
 module P0 = struct
@@ -81,6 +83,9 @@ module P0 = struct
     val end_of_string : unit m
     val alternatives : 'a m list -> 'a m
     val sequence : 'a m list -> 'a list m
+
+    (** {2 Support for OCaml's Str regexp lib *)
+    val str_re : string -> string m
   end = struct
     include Instance 
     open P0_lib
@@ -88,7 +93,20 @@ module P0 = struct
     let return = Monad.return
     let of_fun = Monad.Internal.of_fun
     let to_fun = Monad.Internal.to_fun
+
+    let str_re (re:string) = 
+      let open Str in
+      let re = Str.regexp re in
+      of_fun (fun s -> 
+          string_match re s.input 0 |> function
+          | false -> None
+          | true -> matched_string s.input |> fun mat -> 
+                    Some(mat,{s with input=drop (String.length mat) s.input}))
+    let _ = str_re
+
   end
     
 
 end
+
+include P0.Export

@@ -53,8 +53,9 @@ module type INTERNAL_REQS = sig
   val regexp_string_to_tm: string -> string sym
 end
 
+module P0 = P0_with_debug
 
-module Internal_generated_parser(Reqs: sig include INTERNAL_REQS with type 'a rhs = 'a P0_lib.m and type rule = unit end) : sig 
+module Internal_generated_parser(Reqs: sig include INTERNAL_REQS with type 'a rhs = 'a P0.m and type rule = unit end) : sig 
   val _S : rulelist Reqs.nt
 end = struct
 
@@ -86,6 +87,10 @@ module Terminals = struct
   let eps = a""
 end
 open Terminals
+
+(* NOTE in the following generated code, pairs and lists evaluate
+   right to left; so later rules in a list take precendence; but this
+   is not what we expect; so we just use a seq of statements *)
 
 
 (** NOTE this is generated code, see src/generate_abnf_parser.ml*)
@@ -149,38 +154,35 @@ let _NUM_VAL_REST,_CWSP,_PROSE_VAL,_REPEAT,_CHAR_VAL,_ALTERNATION,_REPETITION,_E
 
 let _ = print_endline "pre rules evaluated"
 
-let debug ?(msg="") p = P0_lib.(
+let debug ?(msg="") p = P0.(
     of_fun (fun s -> 
-        Printf.printf "debug called; msg=%s; input=>>%s<<\n%!" msg s;
+        Printf.printf "debug called; msg=%s; input=>>%s<<\n%!" msg s.input;
         to_fun p s))
 
 (** Rules *)
-let rules = (
-_S --> debug ~msg:"_S" (_3 (ws,nt _RULELIST,ws)    (fun (x1,x2,x3) ->  x2 ));
+let _ = begin
+_S -->_3 (ws,nt _RULELIST,ws)    (fun (x1,x2,x3) ->  x2 );
 
-(* FIXME could be more efficient if we implemented "star" efficiently; at the momemnt this reparses the final elt *)
-_RULELIST -->debug ~msg:"RL1" (_2 (nt _RULELIST_ELT,nt _RULELIST)    (fun (x1,x2) ->  match x2 with RULELIST(xs) -> RULELIST(x1 :: xs) ));
-_RULELIST -->debug ~msg:"RL2" (_1 (nt _RULELIST_ELT)    (fun x1 ->  RULELIST[x1] ));
+_RULELIST -->_2 (nt _RULELIST_ELT,nt _RULELIST)    (fun (x1,x2) ->  match x2 with RULELIST(xs) -> RULELIST(x1 :: xs) );
+_RULELIST -->_1 (nt _RULELIST_ELT)    (fun x1 ->  RULELIST[x1] );
 
-_RULELIST_ELT --> debug ~msg:"_REL1" (_1 (nt _RULE)    (fun x1 ->  RE_RULE(x1) ));
-_RULELIST_ELT --> debug ~msg:"_REL2" (_1 (wsplus)    (fun x1 ->  RE_CWSP_CNL(x1) ));
+_RULELIST_ELT -->_1 (nt _RULE)    (fun x1 ->  RE_RULE(x1) );
+_RULELIST_ELT -->_1 (wsplus)    (fun x1 ->  RE_CWSP_CNL(x1) );
 
 _STAR_CWSP_CNL -->_2 (nt _CWSP,nt _STAR_CWSP_CNL)    (fun (x1,x2) ->  string_concat [x1;x2] );
 _STAR_CWSP_CNL -->_1 (nt _CNL)    (fun x1 ->  x1 );
 
 _RULE -->_4 (nt _RULENAME,nt _DEFINED_AS,nt _ELEMENTS,nt _CNL)    (fun (x1,x2,x3,x4) ->  RULE(x1,x2,x3,x4) );
 
-_RULENAME --> debug ~msg:"_RULENAME" (_1 (rulename)    (fun x1 -> RULENAME x1 ));
+_RULENAME -->_1 (rulename)    (fun x1 ->  RULENAME x1 );
 
-_DEFINED_AS --> debug ~msg:"_DEFINED_AS" (_3 (nt _STAR_CWSP,nt _EQUAL_OR_EQUAL_SLASH,nt _STAR_CWSP)    (fun (x1,x2,x3) ->  x2 ));
+_DEFINED_AS -->_3 (nt _STAR_CWSP,nt _EQUAL_OR_EQUAL_SLASH,nt _STAR_CWSP)    (fun (x1,x2,x3) ->  x2 );
 
-_STAR_CWSP --> debug ~msg:"_STAR_CWSP" (_2 (nt _CWSP,nt _STAR_CWSP)    (fun (x1,x2) ->  () ));
-_STAR_CWSP --> debug ~msg:"_STAR_CWSP 2" (_1 (eps)    (fun x1 ->  () ));
+_STAR_CWSP -->_2 (nt _CWSP,nt _STAR_CWSP)    (fun (x1,x2) ->  () );
+_STAR_CWSP -->_1 (eps)    (fun x1 ->  () );
 
-
-
-_EQUAL_OR_EQUAL_SLASH --> debug ~msg:"EQ1" (_1 (a"=/")    (fun x1 ->  DAS_EQUAL_SLASH ));
-_EQUAL_OR_EQUAL_SLASH --> debug ~msg:"EQ2" (_1 (a"=")    (fun x1 ->  DAS_EQUAL ));
+_EQUAL_OR_EQUAL_SLASH -->_1 (a"=/")    (fun x1 ->  DAS_EQUAL_SLASH );
+_EQUAL_OR_EQUAL_SLASH -->_1 (a"=")    (fun x1 ->  DAS_EQUAL );
 
 _ELEMENTS -->_2 (nt _ALTERNATION,nt _STAR_CWSP)    (fun (x1,x2) ->  ELEMENTS(x1) );
 
@@ -224,7 +226,7 @@ _GROUP -->_5 (a"(",nt _STAR_CWSP,nt _ALTERNATION,nt _STAR_CWSP,a")")    (fun (x1
 
 _OPTION -->_5 (a"[",nt _STAR_CWSP,nt _ALTERNATION,nt _STAR_CWSP,a"]")    (fun (x1,x2,x3,x4,x5) ->  OPTION(x3) );
 
-_CHAR_VAL --> debug ~msg:"_CHAR_VAL" (_3 (dquote,char_vals,dquote)    (fun (x1,x2,x3) ->  string_concat [x1;x2;x3] ));
+_CHAR_VAL -->_3 (dquote,char_vals,dquote)    (fun (x1,x2,x3) ->  string_concat [x1;x2;x3] );
 
 _NUM_VAL -->_2 (a"%",nt _NUM_VAL_REST)    (fun (x1,x2) ->  string_concat [x1;x2] );
 
@@ -239,7 +241,7 @@ _DEC_VAL -->_3 (a"d",one_star_digit,dec_val_rest)    (fun (x1,x2,x3) ->  string_
 _HEX_VAL -->_3 (a"x",one_star_hexdig,hex_val_rest)    (fun (x1,x2,x3) ->  string_concat [x1;x2;x3] );
 
 _PROSE_VAL -->_3 (a"<",prose_val_chars,a">")    (fun (x1,x2,x3) ->  x2 );
-)
+end
 
 (* let _ = Printf.printf "rules length: %d\n%!" (List.length rules) *)
 
@@ -267,13 +269,13 @@ module Internal2 = struct
     let nt_to_hum_tbl = Hashtbl.create 100
     let nt_to_hum i = 
       Hashtbl.find_opt nt_to_hum_tbl i |> function
-      | None -> "unknown nonterminal"
+      | None -> failwith (Printf.sprintf "unknown nonterminal with id %d (%s)" i __FILE__)
       | Some s -> s
 
 
     type 'a nt = int
 
-    type 'a sym = Nt of 'a nt | Tm of string P0_lib.m
+    type 'a sym = Nt of 'a nt | Tm of string P0.m
 
     let mk_nt = 
       let free = ref 0 in
@@ -284,7 +286,7 @@ module Internal2 = struct
         Printf.printf "Non-term %s with id %d\n%!" s x;
         x
 
-    let a s = Tm (P0_lib.a s)
+    let a s = Tm (P0.a s)
   end
   module Reqs = struct
     include Typed_syms
@@ -326,10 +328,10 @@ module Internal2 = struct
 *)
 
     (* rhs is just a parser; not possible to inspect the structure  *)
-    type 'a rhs = 'a P0_lib.m
+    type 'a rhs = 'a P0.m
 
     type s2p = {
-      s2p: 'a. 'a sym -> 'a P0_lib.m
+      s2p: 'a. 'a sym -> 'a P0.m
     }
 
     let s2p: s2p ref = ref {s2p = (fun _ -> failwith __LOC__) }
@@ -342,7 +344,7 @@ module Internal2 = struct
       val _4: ('a sym * 'b sym * 'c sym * 'd sym) -> ('a * 'b * 'c * 'd -> 'z) -> 'z rhs
       val _5: ('a sym * 'b sym * 'c sym * 'd sym * 'e sym) -> ('a * 'b * 'c * 'd * 'e -> 'z) -> 'z rhs
     end = struct
-      open P0_lib
+      open P0
       let p sym = of_fun (fun s -> to_fun (!s2p.s2p sym) s) (* NOTE the delayed evaluation of s2p *)
       let _ = p
       let _1 s f = p s >>= fun x -> return (f x)
@@ -369,18 +371,18 @@ module Internal2 = struct
       let rhs: univ rhs = Obj.magic rhs in
       Hashtbl.find_opt tbl nt |> (function
           | None -> Hashtbl.replace tbl nt rhs
-          | Some p -> Hashtbl.replace tbl nt P0_lib.(p || rhs))
+          | Some p -> Hashtbl.replace tbl nt P0.(p || rhs))
 
     let _ = ( --> )
 
     let nt (nt:'a nt) : 'a sym = Nt nt
 
-    let regexp_string_to_tm s = Tm (P0_lib.Str_.re s)
+    let regexp_string_to_tm s = Tm (P0.str_re s)
 
-    (* open P0_lib  *)
+    (* open P0  *)
     
     module Internal3 = struct
-      let rec nt_to_parser (nt:univ nt) : univ P0_lib.m = 
+      let rec nt_to_parser (nt:univ nt) : univ P0.m = 
         Printf.printf "nt_to_parser called with nt %s\n%!" (nt_to_hum nt);
         (* we look up the nt in the hashtbl, and convert to a parser *)
         Hashtbl.find_opt tbl nt |> function
@@ -393,10 +395,10 @@ module Internal2 = struct
       let _ = nt_to_parser
     end
 
-    let nt_to_parser : 'a nt -> 'a P0_lib.m = 
+    let nt_to_parser : 'a nt -> 'a P0.m = 
       fun nt -> Obj.magic (Internal3.nt_to_parser nt)
 
-    let sym_to_parser : 'a sym -> 'a P0_lib.m = 
+    let sym_to_parser : 'a sym -> 'a P0.m = 
       fun s -> Obj.magic (Internal3.sym_to_parser s)
 
     let _ = s2p:={s2p=sym_to_parser}
@@ -413,7 +415,7 @@ module Internal2 = struct
   module Export : sig
     type 'a nt
     val _S : rulelist nt
-    val nt_to_parser: 'a nt -> 'a P0_lib.m
+    val nt_to_parser: 'a nt -> 'a P0.m
   end = struct
     type 'a nt = int
     let _S = Internal_instance._S
@@ -426,15 +428,15 @@ include Internal2.Export
 
 let _S = nt_to_parser _S 
 
-open P0_lib
-
+open P0
+open State
 let test () = 
-  to_fun _S {|address         = "(" addr-name SP addr-adl SP addr-mailbox SP
+  to_fun _S {State.empty_state with input={|address         = "(" addr-name SP addr-adl SP addr-mailbox SP
                   addr-host ")"
-|}
+|}}
   |> function
 | None -> failwith __LOC__
-| (Some(_,rest)) -> Printf.printf "Remaining input: %s  (%s)\n%!" rest __FILE__
+| (Some(_,rest)) -> Printf.printf "Remaining input: %s  (%s)\n%!" rest.input __FILE__
 
 
 
@@ -451,7 +453,7 @@ let test () =
 
 (*
     include struct
-      (* open P0_lib *)
+      (* open P0 *)
       let _1 s f = Rhs1(s,f)
       let _2 (s1,s2) f = Rhs2((s1,s2),f)
       let _3 ss f = Rhs3(ss,f)
