@@ -158,11 +158,12 @@ let debug ?(msg="") p = P0_lib.(
 let rules = (
 _S --> debug ~msg:"_S" (_3 (ws,nt _RULELIST,ws)    (fun (x1,x2,x3) ->  x2 ));
 
-_RULELIST -->_2 (nt _RULELIST_ELT,nt _RULELIST)    (fun (x1,x2) ->  match x2 with RULELIST(xs) -> RULELIST(x1 :: xs) );
-_RULELIST -->_1 (nt _RULELIST_ELT)    (fun x1 ->  RULELIST[x1] );
+(* FIXME could be more efficient if we implemented "star" efficiently; at the momemnt this reparses the final elt *)
+_RULELIST -->debug ~msg:"RL1" (_2 (nt _RULELIST_ELT,nt _RULELIST)    (fun (x1,x2) ->  match x2 with RULELIST(xs) -> RULELIST(x1 :: xs) ));
+_RULELIST -->debug ~msg:"RL2" (_1 (nt _RULELIST_ELT)    (fun x1 ->  RULELIST[x1] ));
 
-_RULELIST_ELT --> debug ~msg:"_RL1" (_1 (nt _RULE)    (fun x1 ->  RE_RULE(x1) ));
-_RULELIST_ELT --> debug ~msg:"_RL2" (_1 (wsplus)    (fun x1 ->  RE_CWSP_CNL(x1) ));
+_RULELIST_ELT --> debug ~msg:"_REL1" (_1 (nt _RULE)    (fun x1 ->  RE_RULE(x1) ));
+_RULELIST_ELT --> debug ~msg:"_REL2" (_1 (wsplus)    (fun x1 ->  RE_CWSP_CNL(x1) ));
 
 _STAR_CWSP_CNL -->_2 (nt _CWSP,nt _STAR_CWSP_CNL)    (fun (x1,x2) ->  string_concat [x1;x2] );
 _STAR_CWSP_CNL -->_1 (nt _CNL)    (fun x1 ->  x1 );
