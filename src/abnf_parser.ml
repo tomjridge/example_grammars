@@ -2,6 +2,7 @@
 
 module P0 = P0_with_debug
 
+let string_concat xs = String.concat "" xs 
 
 (* let dest_Some = function | Some x -> x | _ -> failwith __LOC__ *)
 
@@ -27,9 +28,17 @@ module type INTERNAL_TYPED_SYMS = sig
   type 'a nt
   type 'a sym
   (* type 'a tm *)
+
   val mk_nt: string -> 'a nt
+
   val a: string -> string sym
+
+  (** for defining terminals without exposing the sym types, we have
+     an extra argument to convert a string regexp into a (terminal)
+     sym *)
+  val regexp_string_to_tm: string -> string sym
 end
+
 
 module type INTERNAL_REQS = sig 
   include INTERNAL_TYPED_SYMS
@@ -43,56 +52,54 @@ module type INTERNAL_REQS = sig
 
   val ( --> ) : 'a nt -> 'a rhs -> rule
   val nt : 'a nt -> 'a sym
+end
+
+
+module Internal_generated_parser
+    (Reqs: sig 
+       include INTERNAL_REQS 
+       with type 'a rhs = 'a P0.m 
+        and type rule = unit end)
+  : sig val _S : rulelist Reqs.nt end 
+= struct
+  open Reqs
 
 (*
-  type 'a grammar 
-  val grammar: name:string -> descr:string -> initial_nt:'a nt ->
-    rules:rule list -> 'a grammar
+let debug ?(msg="") p = P0.(
+    of_fun (fun s -> 
+        Printf.printf "debug called; msg=%s; input=>>%s<<\n%!" msg s.input;
+        to_fun p s))
 *)
 
-  (** for defining terminals without exposing the sym types, we have
-     an extra argument to convert a string regexp into a (terminal)
-     sym *)
-  val regexp_string_to_tm: string -> string sym
-end
+  module Terminals = struct
+    (** NOTE the following terminals are defined using Str format regexps *)
 
-module Internal_generated_parser(Reqs: sig include INTERNAL_REQS with type 'a rhs = 'a P0.m and type rule = unit end) : sig 
-  val _S : rulelist Reqs.nt
-end = struct
+    let _str_regexp (s:string) : string sym = regexp_string_to_tm s
+    let rulename = _str_regexp "[A-Za-z][-A-Za-z0-9]*"
+    let repeat = _str_regexp "[0-9]*[*][0-9]*\\|[0-9]+"
+    let dquote = a{|"|}
+    let char_vals = _str_regexp "[^\"]*"
+    let one_star_bit = _str_regexp "[01]+"
+    let bin_val_rest = _str_regexp "\\([.][0-1]+\\)+\\|[-][0-1]+"
+    let one_star_digit = _str_regexp "[0-9]+"
+    let dec_val_rest = _str_regexp "\\([.][0-9]+\\)+\\|[-][0-9]+"
+    let one_star_hexdig = _str_regexp "[0-9A-Fa-f]+"
+    let hex_val_rest = _str_regexp "\\([.][0-9A-Fa-f]+\\)+\\|[-][0-9A-Fa-f]+"
+    let prose_val_chars = _str_regexp "[^>]*"
+    let crlf = _str_regexp "[\n]" (* FIXME really CR LF *)
+    let vchar = _str_regexp "[\x21-\x7E]"
+    let wsp = _str_regexp "[ \x09]"
+    let ws = _str_regexp "[ \n]*"
+    let wsplus = _str_regexp "[ \n]+"
+    let eps = a""
+  end  (* Terminals *)
+  open Terminals
 
-let string_concat xs = String.concat "" xs 
-
-open Reqs
-
-module Terminals = struct
-
-  (** NOTE the following terminals are defined using Str format regexps *)
-
-  let _str_regexp (s:string) : string sym = regexp_string_to_tm s
-  let rulename = _str_regexp "[A-Za-z][-A-Za-z0-9]*"
-  let repeat = _str_regexp "[0-9]*[*][0-9]*\\|[0-9]+"
-  let dquote = a{|"|}
-  let char_vals = _str_regexp "[^\"]*"
-  let one_star_bit = _str_regexp "[01]+"
-  let bin_val_rest = _str_regexp "\\([.][0-1]+\\)+\\|[-][0-1]+"
-  let one_star_digit = _str_regexp "[0-9]+"
-  let dec_val_rest = _str_regexp "\\([.][0-9]+\\)+\\|[-][0-9]+"
-  let one_star_hexdig = _str_regexp "[0-9A-Fa-f]+"
-  let hex_val_rest = _str_regexp "\\([.][0-9A-Fa-f]+\\)+\\|[-][0-9A-Fa-f]+"
-  let prose_val_chars = _str_regexp "[^>]*"
-  let crlf = _str_regexp "[\n]" (* FIXME really CR LF *)
-  let vchar = _str_regexp "[\x21-\x7E]"
-  let wsp = _str_regexp "[ \x09]"
-  let ws = _str_regexp "[ \n]*"
-  let wsplus = _str_regexp "[ \n]+"
-  let eps = a""
-end
-open Terminals
+(* FIXME prefer to ppx_include the following? *)
 
 (* NOTE in the following generated code, pairs and lists evaluate
    right to left; so later rules in a list take precendence; but this
    is not what we expect; so we just use a seq of statements *)
-
 
 (** NOTE this is generated code, see src/generate_abnf_parser.ml*)
 
@@ -153,15 +160,8 @@ _RULELIST_ELT
 (** Non-terminals *)
 let _NUM_VAL_REST,_CWSP,_PROSE_VAL,_REPEAT,_CHAR_VAL,_ALTERNATION,_REPETITION,_ELEMENT,_RULELIST,_CONCATENATION,_ELEMENTS,_CNL,_RULENAME,_EQUAL_OR_EQUAL_SLASH,_STAR_WSP_VCHAR,_S,_BIN_VAL,_GROUP,_DEC_VAL,_STAR_CONCATENATION_REST,_OPTION,_STAR_ALTERNATION_REST,_STAR_CWSP_CNL,_RULE,_HEX_VAL,_ONE_STAR_CWSP,_COMMENT,_DEFINED_AS,_NUM_VAL,_STAR_CWSP,_RULELIST_ELT = mk_nt "_NUM_VAL_REST",mk_nt "_CWSP",mk_nt "_PROSE_VAL",mk_nt "_REPEAT",mk_nt "_CHAR_VAL",mk_nt "_ALTERNATION",mk_nt "_REPETITION",mk_nt "_ELEMENT",mk_nt "_RULELIST",mk_nt "_CONCATENATION",mk_nt "_ELEMENTS",mk_nt "_CNL",mk_nt "_RULENAME",mk_nt "_EQUAL_OR_EQUAL_SLASH",mk_nt "_STAR_WSP_VCHAR",mk_nt "_S",mk_nt "_BIN_VAL",mk_nt "_GROUP",mk_nt "_DEC_VAL",mk_nt "_STAR_CONCATENATION_REST",mk_nt "_OPTION",mk_nt "_STAR_ALTERNATION_REST",mk_nt "_STAR_CWSP_CNL",mk_nt "_RULE",mk_nt "_HEX_VAL",mk_nt "_ONE_STAR_CWSP",mk_nt "_COMMENT",mk_nt "_DEFINED_AS",mk_nt "_NUM_VAL",mk_nt "_STAR_CWSP",mk_nt "_RULELIST_ELT" 
 
-let _ = print_endline "pre rules evaluated"
-
-let debug ?(msg="") p = P0.(
-    of_fun (fun s -> 
-        Printf.printf "debug called; msg=%s; input=>>%s<<\n%!" msg s.input;
-        to_fun p s))
-
 (** Rules *)
-let _ = begin
+let _ = (
 _S -->_3 (ws,nt _RULELIST,ws)    (fun (x1,x2,x3) ->  x2 );
 
 _RULELIST -->_2 (nt _RULELIST_ELT,nt _RULELIST)    (fun (x1,x2) ->  match x2 with RULELIST(xs) -> RULELIST(x1 :: xs) );
@@ -242,19 +242,11 @@ _DEC_VAL -->_3 (a"d",one_star_digit,dec_val_rest)    (fun (x1,x2,x3) ->  string_
 _HEX_VAL -->_3 (a"x",one_star_hexdig,hex_val_rest)    (fun (x1,x2,x3) ->  string_concat [x1;x2;x3] );
 
 _PROSE_VAL -->_3 (a"<",prose_val_chars,a">")    (fun (x1,x2,x3) ->  x2 );
-end
-
-(* let _ = Printf.printf "rules length: %d\n%!" (List.length rules) *)
+)
 
 let _ : rulelist nt = _S
-
-(*
-(** Wrap up the result and export *)
-let grammar = Reqs.grammar ~name:"ABNF" ~descr:("ABNF parser, see "^__FILE__)
-    ~initial_nt:_S
-    ~rules
-*)
-end
+  
+end  (* Internal_generated_parser *)
 
 
 (** Instantiate the Internal functor, and export the results. This
@@ -265,18 +257,15 @@ end
 module Internal2 = struct
 
   module Typed_syms = struct
-
     (** human readable names *)
     let nt_to_hum_tbl = Hashtbl.create 100
     let nt_to_hum i = 
       Hashtbl.find_opt nt_to_hum_tbl i |> function
-      | None -> failwith (Printf.sprintf "unknown nonterminal with id %d (%s)" i __FILE__)
+      | None -> failwith (
+          Printf.sprintf "unknown nonterminal with id %d (%s)" i __FILE__)
       | Some s -> s
 
-
     type 'a nt = int
-
-    type 'a sym = Nt of 'a nt | Tm of string P0.m
 
     let mk_nt = 
       let free = ref 0 in
@@ -287,46 +276,16 @@ module Internal2 = struct
         Printf.printf "Non-term %s with id %d\n%!" s x;
         x
 
+    type 'a sym = Nt of 'a nt | Tm of string P0.m
+
     let a s = Tm (P0.a s)
   end
+
+
   module Reqs = struct
     include Typed_syms
 
-
     type univ
-
-(*
-    (* an concrete repr of rhs *)
-    type 'a rhs' = univ sym list * (univ list -> univ)
-
-    module Underscores : sig 
-      type 'a rhs = 'a rhs'
-      val _1: 'a sym -> ('a -> 'z) -> 'z rhs
-      val _2: ('a sym * 'b sym) -> ('a * 'b -> 'z) -> 'z rhs
-      val _3: ('a sym * 'b sym * 'c sym) -> ('a * 'b * 'c -> 'z) -> 'z rhs
-      val _4: ('a sym * 'b sym * 'c sym * 'd sym) -> ('a * 'b * 'c * 'd -> 'z) -> 'z rhs
-      val _5: ('a sym * 'b sym * 'c sym * 'd sym * 'e sym) -> ('a * 'b * 'c * 'd * 'e -> 'z) -> 'z rhs
-    end = struct
-      type 'a rhs = 'a rhs'
-      let xxx = Obj.magic
-      let _1 : 'a sym -> ('a -> 'z) -> 'z rhs' = fun s f -> 
-        [xxx s],
-        fun [u1] -> xxx (f (xxx u1))
-      let _2 = fun (s1,s2) f -> 
-        [xxx s1;xxx s2],
-        fun [u1;u2] -> xxx (f (xxx u1, xxx u2))
-      let _3 (s1,s2,s3) f = 
-        [xxx s1; xxx s2; xxx s3],
-        fun [u1;u2;u3] -> xxx (f (xxx u1, xxx u2, xxx u3))
-      let _4 (s1,s2,s3,s4) f = 
-        [xxx s1; xxx s2; xxx s3; xxx s4],
-        fun [u1;u2;u3;u4] -> xxx (f (xxx u1, xxx u2, xxx u3, xxx u4))
-      let _5 (s1,s2,s3,s4,s5) f = 
-        [xxx s1; xxx s2; xxx s3; xxx s4; xxx s5],
-        fun [u1;u2;u3;u4;u5] -> xxx (f (xxx u1, xxx u2, xxx u3, xxx u4, xxx u5))
-    end
-    (* include Underscores *)
-*)
 
     (* rhs is just a parser; not possible to inspect the structure  *)
     type 'a rhs = 'a P0.m
@@ -420,7 +379,7 @@ module Internal2 = struct
             | Some p -> Hashtbl.replace tbl nt (p || rhs))
 
       let _ = add_rule
-    end
+    end  (* Rules *)
 
     (** FIXME change this to enable debugging *)
     let debug = false
@@ -431,8 +390,7 @@ module Internal2 = struct
 
     let regexp_string_to_tm s = Tm (P0.str_re s)
 
-    (* open P0  *)
-    
+
     module Internal3 = struct
       let rec nt_to_parser (nt:univ nt) : univ P0.m = 
         (* Printf.printf "nt_to_parser called with nt %s\n%!" (nt_to_hum nt); *)
@@ -456,14 +414,11 @@ module Internal2 = struct
     let _ = s2p:={s2p=sym_to_parser}
 
     let _ = nt_to_parser
-
-  end
+  end  (* Reqs *)
   module Internal_instance = Internal_generated_parser(Reqs)
 
-  
-  
-  (* include (Internal_instance : sig val grammar : rulelist Reqs.grammar end) *)
 
+  (** What we export *)
   module Export : sig
     type 'a nt
     val _S : rulelist nt
@@ -474,7 +429,7 @@ module Internal2 = struct
     let nt_to_parser = Reqs.nt_to_parser
   end
     
-end
+end  (* Internal2 *)
 
 include Internal2.Export
 
@@ -482,44 +437,14 @@ let _S = nt_to_parser _S
 
 open P0
 open State
+
 let test () = 
   let make_state input = {State.empty_state with input} in
-(*  let _s = make_state {|address         = "(" addr-name SP addr-adl SP addr-mailbox SP
-                  addr-host ")" |}
-  in *)
   let s = make_state Blobs.imap_protocol_abnf in
   to_fun _S s
   |> function
-| None -> failwith __LOC__
-| (Some(_,rest)) -> Printf.printf "Parsed IMAP grammar. Remaining input: %s  (%s)\n%!" rest.input __FILE__
-
-
-
-    (*
-    (** To store the defns of nts *)
-    type 'z rhs = 
-      | Rhs1: 'a sym * ('a -> 'z) -> 'z rhs
-      | Rhs2: ('a sym * 'b sym) * ('a * 'b -> 'z) -> 'z rhs
-      | Rhs3: ('a sym * 'b sym * 'c sym) * ('a * 'b * 'c -> 'z) -> 'z rhs
-      | Rhs4: ('a sym * 'b sym * 'c sym * 'd sym) * ('a * 'b * 'c * 'd -> 'z) -> 'z rhs
-      | Rhs5: ('a sym * 'b sym * 'c sym * 'd sym * 'e sym) * ('a * 'b * 'c * 'd * 'e -> 'z) -> 'z rhs
-*)
-
-
-(*
-    include struct
-      (* open P0 *)
-      let _1 s f = Rhs1(s,f)
-      let _2 (s1,s2) f = Rhs2((s1,s2),f)
-      let _3 ss f = Rhs3(ss,f)
-      let _4 ss f = Rhs4(ss,f)
-      let _5 ss f = Rhs5(ss,f)
-    end
-*)
-
-
-(*
-    type 'a grammar = { name:string; descr:string; initial_nt: 'a nt }
-    let grammar  ~name ~descr ~initial_nt ~(rules:rule list) = 
-      { name; descr; initial_nt }
-*)
+  | None -> failwith __LOC__
+  | (Some(_,rest)) -> 
+    Printf.printf 
+      "Parsed IMAP grammar. Remaining input: %s  (%s)\n%!"
+      rest.input __FILE__

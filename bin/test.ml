@@ -4,15 +4,11 @@ let main i =
   match i with
   | 1 -> Pbnf_parser.main()
   | 2 -> Generate_abnf_parser.main()
-  | 3 -> Abnf_parser.test()
+  | 3 -> Bin_util.time (fun () -> Abnf_parser.test()) |> fun f ->
+         Printf.printf "Abnf_parser.test in %f\n" f
   | _ -> failwith __LOC__
 
 let _ = 
   List.iter main 
     (* [1;2] *)
     [3]
-(*
-let _ = Parse_abnf_grammar_txt.test ()
-
-let _ = Generate_abnf_parser.pretty_print()  
-*)
