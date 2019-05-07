@@ -8,7 +8,7 @@ module State = struct
   let empty_state = { input=""; debug=[] }
 end
 
-module P0 = struct
+module Internal = struct
 
   open P0_lib.Internal
 
@@ -72,6 +72,7 @@ module P0 = struct
     val re : re -> string m
 
     (** {2 Standard combinators} *)
+
     val a : string -> string m
     val opt : 'a m -> 'a option m
     val then_ : 'a m -> 'b m -> ('a * 'b) m
@@ -84,7 +85,8 @@ module P0 = struct
     val alternatives : 'a m list -> 'a m
     val sequence : 'a m list -> 'a list m
 
-    (** {2 Support for OCaml's Str regexp lib *)
+    (** {2 Support for OCaml's Str regexp lib} *)
+
     val str_re : string -> string m
   end = struct
     include Instance 
@@ -109,4 +111,4 @@ module P0 = struct
 
 end
 
-include P0.Export
+include Internal.Export
