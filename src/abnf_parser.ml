@@ -214,11 +214,11 @@ module Internal2 = struct
   (** What we export *)
   module Export : sig
     type 'a nt
-    val _S : rulelist nt
+    val abnf_parser_start_nonterm : rulelist nt
     val nt_to_parser: 'a nt -> 'a P0.m
   end = struct
     type 'a nt = int
-    let _S = Internal_instance._S
+    let abnf_parser_start_nonterm = Internal_instance._S
     let nt_to_parser = Reqs.nt_to_parser
   end
     
@@ -226,7 +226,7 @@ end  (* Internal2 *)
 
 include Internal2.Export
 
-let _S = nt_to_parser _S 
+let _S = nt_to_parser abnf_parser_start_nonterm 
 
 open P0
 open State
