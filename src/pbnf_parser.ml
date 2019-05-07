@@ -1,6 +1,8 @@
 (** Parse the grammar description in abnf_grammar.txt; this is a
    simple format, with actions *)
 
+open P0_lib
+
 (** Helper to avoid dependence on associativity of -- *)
 let _3 ((x1,x2),x3) = (x1,x2,x3)
 
@@ -26,7 +28,7 @@ end
 
 module Grammar_of_grammars = struct 
   open Grammar_type
-  open P0_lib
+  open P0
 
   let comm = a "(*" -- upto_a "*)" -- a "*)"  (* FIXME nested comments *)
 
@@ -95,12 +97,12 @@ open Grammar_of_grammars
 open Core_kernel
 
 let main () = 
-  P0_lib.to_fun grammar Blobs.abnf_pbnf |> fun (Some(g,"")) -> 
+  P0.to_fun grammar Blobs.abnf_pbnf |> fun (Some(g,"")) -> 
   g |> export_to_string |> fun str -> 
   print_endline str
 
 let test () = 
-  P0_lib.to_fun grammar Blobs.abnf_pbnf |> fun (Some(g,"")) -> 
+  P0.to_fun grammar Blobs.abnf_pbnf |> fun (Some(g,"")) -> 
   g |> export_to_string |> fun str -> 
   print_endline str;
   str |> Sexp.of_string |> fun sexp ->

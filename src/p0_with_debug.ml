@@ -1,4 +1,5 @@
 (** An instance of P0 with extra state to record debug information. *)
+open P0_lib
 
 module State = struct
   type t = { input:string; debug:(string*string) list }  
@@ -10,16 +11,15 @@ end
 
 module Internal = struct
 
-  open P0_lib.Internal
-
   open State
+  open P0.Internal
 
   module StringIM = struct
     module I = StringI
     type t = State.t 
-    let get_input () = P0_lib.Monad.Internal.of_fun (fun t -> 
+    let get_input () = P0.Monad.Internal.of_fun (fun t -> 
         Some(t.input,t))
-    let set_input i = P0_lib.Monad.Internal.of_fun (fun t ->
+    let set_input i = P0.Monad.Internal.of_fun (fun t ->
         Some((),{t with input=i}))
   end
 
@@ -55,7 +55,7 @@ module Internal = struct
 
     (** {2 Monad type and ops} *)
 
-    type 'a m = ('a, State.t) P0_lib.Monad.m
+    type 'a m = ('a, State.t) P0.Monad.m
     val return : 'a -> 'a m
     val ( >>= ) : 'a m -> ('a -> 'b m) -> 'b m
     val of_fun : (State.t -> ('a * State.t) option) -> 'a m
@@ -90,7 +90,7 @@ module Internal = struct
     val str_re : string -> string m
   end = struct
     include Instance 
-    open P0_lib
+    open P0
     let ( >>= ) = Monad.( >>= )
     let return = Monad.return
     let of_fun = Monad.Internal.of_fun
