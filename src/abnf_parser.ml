@@ -1,5 +1,8 @@
 (** A parser for ABNF format grammars *)
 
+module P0 = P0_with_debug
+
+
 (* let dest_Some = function | Some x -> x | _ -> failwith __LOC__ *)
 
 module Abnf_grammar_datatype = struct
@@ -52,8 +55,6 @@ module type INTERNAL_REQS = sig
      sym *)
   val regexp_string_to_tm: string -> string sym
 end
-
-module P0 = P0_with_debug
 
 module Internal_generated_parser(Reqs: sig include INTERNAL_REQS with type 'a rhs = 'a P0.m and type rule = unit end) : sig 
   val _S : rulelist Reqs.nt
@@ -359,21 +360,72 @@ module Internal2 = struct
     end
     include Underscores_2
 
-
     type rule = unit 
     (* Rule: 'a nt * 'a rhs -> rule ; we mutate 'a nt directly *)
-      
 
-    (* store rules *)
-    let tbl = Hashtbl.create 100    
+    module Rules = struct
+      open P0
 
-    let ( --> ) (type a) (nt:a nt) (rhs:a rhs) : unit = 
-      let rhs: univ rhs = Obj.magic rhs in
-      Hashtbl.find_opt tbl nt |> (function
-          | None -> Hashtbl.replace tbl nt rhs
-          | Some p -> Hashtbl.replace tbl nt P0.(p || rhs))
+      (* store rules *)
+      let tbl = Hashtbl.create 100    
 
-    let _ = ( --> )
+      let delay () = of_fun (fun s -> Some((),s))
+
+      let new_rhs_id =
+        let tbl = Hashtbl.create 100 in
+        fun nt -> 
+          Hashtbl.find_opt tbl nt 
+          |> (function
+              | None -> (ref 0 |> fun r -> Hashtbl.replace tbl nt r; r)
+              | Some r -> r)
+          |> fun r -> 
+          let y = !r in
+          r:=!r+1;
+          y
+
+      let get_state : unit -> State.t m = fun () -> 
+        of_fun (fun s -> Some(s,s))
+
+      let set_state : State.t -> unit m = fun s -> 
+        of_fun (fun _ -> Some((),s))
+
+      (* open P0 *)
+
+      let debug_nt ~nt_hum ~input =
+        get_state () >>= fun s ->
+        set_state {s with debug=(nt_hum,input)::s.debug}
+
+      let replace_newlines ~char s = 
+        Core_kernel.String.tr ~target:'\n' ~replacement:char s
+
+      let add_rule (type a) ~(debug:bool) (nt:a nt) (rhs:a rhs) : unit = 
+        let rhs: univ rhs = Obj.magic rhs in
+        let rhs = 
+          match debug with
+          | false -> rhs 
+          | true -> (
+            let nt_hum = nt_to_hum nt in
+            let id = new_rhs_id nt in
+            get_state () >>= fun s -> 
+            set_state {s with debug=(nt_hum,s.input)::s.debug} >>= fun () ->
+            Printf.printf "(%s) %d%s%d\n" 
+              (s.input |> fun s -> String.sub s 0 (min (String.length s) 10) |> replace_newlines ~char:'@')
+              (*(String.make (List.length s.debug) '.') *) (List.length s.debug)
+              nt_hum 
+              id;
+            rhs)
+        in
+        Hashtbl.find_opt tbl nt |> (function
+            | None -> Hashtbl.replace tbl nt rhs
+            | Some p -> Hashtbl.replace tbl nt (p || rhs))
+
+      let _ = add_rule
+    end
+
+    (** FIXME change this to enable debugging *)
+    let debug = false
+
+    let ( --> ) nt rhs = Rules.add_rule ~debug nt rhs
 
     let nt (nt:'a nt) : 'a sym = Nt nt
 
@@ -383,9 +435,9 @@ module Internal2 = struct
     
     module Internal3 = struct
       let rec nt_to_parser (nt:univ nt) : univ P0.m = 
-        Printf.printf "nt_to_parser called with nt %s\n%!" (nt_to_hum nt);
+        (* Printf.printf "nt_to_parser called with nt %s\n%!" (nt_to_hum nt); *)
         (* we look up the nt in the hashtbl, and convert to a parser *)
-        Hashtbl.find_opt tbl nt |> function
+        Hashtbl.find_opt Rules.tbl nt |> function
         | None -> failwith (Printf.sprintf "No rules found for non-terminal %s" (nt_to_hum nt))
         | Some p -> p
       and sym_to_parser = function
@@ -431,12 +483,15 @@ let _S = nt_to_parser _S
 open P0
 open State
 let test () = 
-  to_fun _S {State.empty_state with input={|address         = "(" addr-name SP addr-adl SP addr-mailbox SP
-                  addr-host ")"
-|}}
+  let make_state input = {State.empty_state with input} in
+(*  let _s = make_state {|address         = "(" addr-name SP addr-adl SP addr-mailbox SP
+                  addr-host ")" |}
+  in *)
+  let s = make_state Blobs.imap_grammar_abnf in
+  to_fun _S s
   |> function
 | None -> failwith __LOC__
-| (Some(_,rest)) -> Printf.printf "Remaining input: %s  (%s)\n%!" rest.input __FILE__
+| (Some(_,rest)) -> Printf.printf "Parsed IMAP grammar. Remaining input: %s  (%s)\n%!" rest.input __FILE__
 
 
 

@@ -10,7 +10,7 @@ let main i =
 let _ = 
   List.iter main 
     (* [1;2] *)
-    [2;3]
+    [3]
 (*
 let _ = Parse_abnf_grammar_txt.test ()
 
