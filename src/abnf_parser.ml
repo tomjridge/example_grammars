@@ -213,20 +213,16 @@ module Internal2 = struct
 
   (** What we export *)
   module Export : sig
-    type 'a nt
-    val abnf_parser_start_nonterm : rulelist nt
-    val nt_to_parser: 'a nt -> 'a P0.m
+    val abnf_parser: rulelist P0.m
   end = struct
-    type 'a nt = int
-    let abnf_parser_start_nonterm = Internal_instance._S
-    let nt_to_parser = Reqs.nt_to_parser
+    let abnf_parser = Reqs.nt_to_parser Internal_instance._S
   end
     
 end  (* Internal2 *)
 
 include Internal2.Export
 
-let _S = nt_to_parser abnf_parser_start_nonterm 
+(* let _S = nt_to_parser abnf_parser_start_nonterm  *)
 
 open P0
 open State
@@ -234,7 +230,7 @@ open State
 let test () = 
   let make_state input = {State.empty_state with input} in
   let s = make_state Blobs.imap_protocol_abnf in
-  to_fun _S s
+  to_fun abnf_parser s
   |> function
   | None -> failwith __LOC__
   | (Some(_,rest)) -> 
