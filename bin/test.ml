@@ -11,4 +11,4 @@ let main i =
 let _ = 
   List.iter main 
     (* [1;2] *)
-    [3]
+    [2;3]

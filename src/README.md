@@ -9,7 +9,7 @@ The sequence of parsing and generating parsers is:
 | pbnf_parser.ml           | PBNF parser; parses abnf.pbnf and generates abnf.sexp        |
 | abnf.sexp                | A .sexp version of the ABNF specification                    |
 | generate_abnf_parser.ml  | Takes abnf.sexp and generates a parser for ABNF format files |
-| abnf_parser.ml.generated | Generated code fragment, in a parsing DSL (OCaml subset) from tjr_simple_earley |
+| abnf_parser_generated.ml | Generated code fragment, in a parsing DSL (OCaml subset) from tjr_simple_earley |
 | abnf_parser.ml           | Generated parser for ABNF-format files (with some generic additional code that should be factored out) |
 | imap_protocol.abnf       | ABNF-format definition of the IMAP protocol                  |
 | imap_protocol.sexp       | sexp version of the IMAP protocol                            |

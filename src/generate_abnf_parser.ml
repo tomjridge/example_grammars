@@ -63,7 +63,9 @@ let pretty_print () =
   Hashtbl.to_seq_keys tbl_nts |> List.of_seq |> fun nts -> 
   Hashtbl.to_seq_keys tbl_tms |> List.of_seq |> fun tms -> 
   Printf.printf {|
-(** NOTE this is generated code, see %s*)
+open Abnf_parser_prelude
+
+(** NOTE this is generated code, see %s *)
 
 (** NOTE terminals:
 %s
@@ -73,18 +75,28 @@ let pretty_print () =
 %s
 *)
 
+module Make(Reqs:INTERNAL_REQS with type rule=unit)(Terms:sig
+    open Reqs
+    %s end) = struct
+
+open Reqs
+open Terms
+
 (** Non-terminals *)
 let %s = %s 
 
 
 (** Rules; NOTE these have to be added in the given order due to short-circuit alternatives *)
-let  = begin
+let _ = (
 %s
+)
+
 end
 |}
     __FILE__
     (String.concat "\n" tms)
     (String.concat "\n" nts)
+    (tms |> List.map (fun tm -> Printf.sprintf "    val %s : string sym" tm) |> String.concat "\n")
     (String.concat "," nts)
     (nts |> List.map (fun nt ->
          Printf.sprintf {|mk_nt "%s"|} nt) |> String.concat ",")
