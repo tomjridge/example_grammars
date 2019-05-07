@@ -2,7 +2,7 @@ open Example_grammars
 
 let main i = 
   match i with
-  | 1 -> Parse_abnf_grammar_txt.main()
+  | 1 -> Pbnf_parser.main()
   | 2 -> Generate_abnf_parser.main()
   | 3 -> Abnf_parser.test()
   | _ -> failwith __LOC__

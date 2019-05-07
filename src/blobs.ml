@@ -1,7 +1,7 @@
 (** We include text files via ppx_blob *)
 
-let abnf_grammar_txt = [%blob "abnf_grammar.txt"]
+let abnf_pbnf = [%blob "abnf.pbnf"]
 
-let abnf_grammar_sexp = [%blob "abnf_grammar.sexp"]
+let abnf_sexp = [%blob "abnf.sexp"]
 
-let imap_grammar_abnf = [%blob "imap_grammar.abnf"]
+let imap_protocol_abnf = [%blob "imap_protocol.abnf"]

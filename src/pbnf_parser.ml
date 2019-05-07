@@ -95,12 +95,12 @@ open Grammar_of_grammars
 open Core_kernel
 
 let main () = 
-  P0_lib.to_fun grammar Blobs.abnf_grammar_txt |> fun (Some(g,"")) -> 
+  P0_lib.to_fun grammar Blobs.abnf_pbnf |> fun (Some(g,"")) -> 
   g |> export_to_string |> fun str -> 
   print_endline str
 
 let test () = 
-  P0_lib.to_fun grammar Blobs.abnf_grammar_txt |> fun (Some(g,"")) -> 
+  P0_lib.to_fun grammar Blobs.abnf_pbnf |> fun (Some(g,"")) -> 
   g |> export_to_string |> fun str -> 
   print_endline str;
   str |> Sexp.of_string |> fun sexp ->
@@ -109,9 +109,9 @@ let test () =
   assert(str=str');
   sexp |> export_of_sexp |> fun e -> 
   print_endline "OK";
-  print_endline Blobs.abnf_grammar_sexp;
+  print_endline Blobs.abnf_sexp;
   (* Printf.printf "%s %d %d\n%!" __LOC__ (String.length str) (String.length Blobs.abnf_grammar_sexp); *)
-  assert(str = Blobs.abnf_grammar_sexp)
+  assert(str = Blobs.abnf_sexp)
 (*
   export_of_sexp |> fun g' ->
   g |> export_to_string |> Core_kernel.sexp_of_string |> export_of_sexp |> fun g' ->

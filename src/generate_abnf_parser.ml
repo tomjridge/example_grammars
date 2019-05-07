@@ -1,8 +1,8 @@
 (** Use abnf_grammar.txt,sexp to generate an ABNF parser. *)
 include struct
-  open Parse_abnf_grammar_txt.Grammar_of_grammars
+  open Pbnf_parser.Grammar_of_grammars
 
-  let it = Blobs.abnf_grammar_sexp
+  let it = Blobs.abnf_sexp
 
   let abnf_grammar_sexp = it |> Core_kernel.Sexp.of_string
 
@@ -25,7 +25,7 @@ let _x =
 let pretty_print () = 
   let tbl_nts = Hashtbl.create 100 in
   let tbl_tms = Hashtbl.create 100 in (* not including literals a"..." *)
-  let open Parse_abnf_grammar_txt.Grammar_type in
+  let open Pbnf_parser.Grammar_type in
   abnf_export |> List.map (fun (nt,syms_act_list) -> 
     let pp_nt ?(add_nt_prefix=true) nt = 
       "_"^nt |> fun s ->

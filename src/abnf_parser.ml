@@ -487,7 +487,7 @@ let test () =
 (*  let _s = make_state {|address         = "(" addr-name SP addr-adl SP addr-mailbox SP
                   addr-host ")" |}
   in *)
-  let s = make_state Blobs.imap_grammar_abnf in
+  let s = make_state Blobs.imap_protocol_abnf in
   to_fun _S s
   |> function
 | None -> failwith __LOC__
