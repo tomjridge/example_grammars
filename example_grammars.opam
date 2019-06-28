@@ -10,6 +10,7 @@ maintainer: "Tom Ridge <tom.j.ridge@googlemail.com>"
 
 depends: [
   "ppx_blob"
+  "p0_lib"
 ]
 
 # ----------------------------------------------------------------------
