@@ -23,6 +23,5 @@ promote_docs: FORCE
 
 clean:
 	dune clean
-	rm -f p0_lib.install
 
 FORCE:

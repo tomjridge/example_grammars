@@ -3,4 +3,4 @@
   (flags (:standard -w -27-8-40-32-39))
   (preprocessor_deps abnf.pbnf abnf.sexp imap_protocol.abnf)
   (preprocess (pps ppx_blob ppx_jane))
-  (libraries ppx_blob ppx_jane core_kernel p0_lib))
+  (libraries ppx_blob ppx_jane core_kernel p0_lib str))
