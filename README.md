@@ -16,6 +16,21 @@ This repository contains examples to supplement the main parsing libraries I wor
 
 
 
+## Install
+
+Probably easiest via opam, with something like:
+
+~~~
+opam install -y dune ocamlfind odoc
+opam pin add -y -n p0_lib https://github.com/tomjridge/p0.git#dev
+opam pin add -y -n example_grammars https://github.com/tomjridge/example_grammars.git
+opam install -y p0_lib example_grammars
+~~~
+
+
+
+
+
 ## P0, ABNF example
 
 At the moment, the main example is a sequence of P0 parsers. The first implements a parser for "Plain BNF". Subsequent parsers culminate in a parser for  the IMAP protocol. 
