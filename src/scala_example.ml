@@ -88,7 +88,7 @@ let scala_metagrammar (type sym) p =
        (possibly multi-byte) chars *)
     let tick_chars = ["'"; "’"; "‘"]
 
-    let _ : unit = p#add_rule _TICK [ p#any_of tick_chars ]
+    let _ : unit = p#add_rule _TICK [ predef#any_of tick_chars ]
 
 
     (* NOTE this allows mixing ticks - they don't have to match *)
@@ -102,6 +102,9 @@ let scala_metagrammar (type sym) p =
 
     (** Nonterminals *)
 
+
+    (* FIXME note that "ids" is defined as a nonterminal, but starts
+       with a non-capital; typo? *)
     let _ : unit = p#add_rule _NT [ predef#starts_with_upper ]
 
 
@@ -190,12 +193,12 @@ let scala_metagrammar (type sym) p =
 let (_ :
       < add_rule : 'sym -> 'sym list -> unit
       ; add_rules : 'sym -> 'sym list list -> unit
-      ; any_of : string list -> 'sym
       ; list_with_sep : sep:'sym -> 'sym -> 'sym
       ; nt : string -> 'sym
       ; predef :
           < a : string -> 'sym
           ; any_but : string list -> 'sym
+          ; any_of : string list -> 'sym
           ; bar_sep : 'sym
           ; end_of_input : 'sym
           ; starts_with_lower : 'sym
