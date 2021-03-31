@@ -5,7 +5,7 @@
 
 * https://www.scala-lang.org/files/archive/spec/2.13/13-syntax-summary.html
 
-* https://github.com/scala/scala/blob/2.13.x/spec/13-syntax-summary.md
+* https://github.com/scala/scala/blob/2.13.x/spec/13-syntax-summary.md - a copy should be in this directory
 
 *)
 
@@ -39,7 +39,6 @@ let scala_metagrammar (type sym) p =
     (* NOTE the string argument is just for debugging and
        pretty-printing during code generation *)
     let nt (x:string) : sym = p#nt x
-    let tm (x:string) : sym = p#tm x
 
     let predef = p#predef
 
@@ -69,7 +68,7 @@ let scala_metagrammar (type sym) p =
 
     let _G = nt "G" 
 
-    let _NT = tm "NT"  (* capital letter to start *)
+    let _NT = nt "NT"  (* capital letter to start *)
 
     let _TM = nt "TM"  (* lowercase to start; terminals can also be literals *)
 
@@ -85,19 +84,25 @@ let scala_metagrammar (type sym) p =
 
     (** Terminals *)
 
-    let _ : unit = p#add_rules _TICK [
-        [a"'"];
-        [a"’"];
-        [a"‘"]
-      ]
+    (* FIXME question about whether these are ASCII chars, or Unicode
+       (possibly multi-byte) chars *)
+    let tick_chars = ["'"; "’"; "‘"]
+
+    let _ : unit = p#add_rule _TICK [ p#any_of tick_chars ]
+
 
     (* NOTE this allows mixing ticks - they don't have to match *)
-    let _ : unit = p#add_rule _LITERAL [ _TICK; predef#not_tick; _TICK ]        
+    let _ : unit = p#add_rule _LITERAL [ _TICK; predef#any_but tick_chars; _TICK ]        
         
     let _ : unit = p#add_rules _TM [
         [predef#starts_with_lower];
         [_LITERAL]
       ]
+
+
+    (** Nonterminals *)
+
+    let _ : unit = p#add_rule _NT [ predef#starts_with_upper ]
 
 
     (** Symbols *)
@@ -183,20 +188,21 @@ let scala_metagrammar (type sym) p =
   ()
     
 let (_ :
-      < predef :
-          < a : string -> 'sym
-          ; bar_sep : 'sym
-          ; end_of_input : 'sym
-          ; ws : 'sym
-          ; ws_nnl : 'sym
-          ; not_tick : 'sym
-          ; starts_with_lower : 'sym
-          ; .. >
-      ; add_rule : 'sym -> 'sym list -> unit
+      < add_rule : 'sym -> 'sym list -> unit
       ; add_rules : 'sym -> 'sym list list -> unit
+      ; any_of : string list -> 'sym
       ; list_with_sep : sep:'sym -> 'sym -> 'sym
       ; nt : string -> 'sym
-      ; tm : string -> 'sym
+      ; predef :
+          < a : string -> 'sym
+          ; any_but : string list -> 'sym
+          ; bar_sep : 'sym
+          ; end_of_input : 'sym
+          ; starts_with_lower : 'sym
+          ; starts_with_upper : 'sym
+          ; ws : 'sym
+          ; ws_nnl : 'sym
+          ; .. >
       ; .. > ->
       unit) =
   scala_metagrammar
