@@ -84,7 +84,7 @@ let _NUM_VAL_REST,_CWSP,_PROSE_VAL,_REPEAT,_CHAR_VAL,_ALTERNATION,_REPETITION,_E
 
 
 (** Rules; NOTE these have to be added in the given order due to short-circuit alternatives *)
-let _ = (
+let _ : unit = (
 _S -->_3 (ws,nt _RULELIST,ws)    (fun (x1,x2,x3) ->  x2 );
 
 _RULELIST -->_2 (nt _RULELIST_ELT,nt _RULELIST)    (fun (x1,x2) ->  match x2 with RULELIST(xs) -> RULELIST(x1 :: xs) );

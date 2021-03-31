@@ -202,7 +202,7 @@ module Internal2 = struct
     let sym_to_parser : 'a sym -> 'a P0.m = 
       fun s -> Obj.magic (Internal3.sym_to_parser s)
 
-    let _ = s2p:={s2p=sym_to_parser}
+    let _ : unit = s2p:={s2p=sym_to_parser}
 
     let _ = nt_to_parser
   end  (* Reqs *)
