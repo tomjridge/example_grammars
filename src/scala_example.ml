@@ -147,10 +147,7 @@ let scala_metagrammar (type sym) p =
                       |
 
     *)
-    let _ : unit = p#add_rules _SYM_LIST [
-        [eps];
-        [_SYM;_SYM_LIST]
-      ]
+    let _ : unit = p#add_rule _SYM_LIST [ p#list_with_sep ~sep:ws_nnl _SYM ]
 
 
 
