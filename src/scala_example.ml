@@ -14,6 +14,13 @@ let iter_k f (x:'a) =
   let rec k x = f ~k x in
   k x
 
+(* FIXME move to List *)
+let rec intersperse x ys = 
+  match ys with 
+  | [] -> []
+  | [y] -> [y]
+  | y::ys -> y::x::(intersperse x ys)
+
 
 let example = {|
   Literal           ::=  [‘-’] integerLiteral
@@ -52,14 +59,8 @@ let scala_metagrammar (type sym) p =
 
     let eps = a ""
 
-
     (* this allows whitespace-nnl between each elt of rule *)
-    let with_ws (rule:sym list) : sym list = 
-      (rule,[]) |> iter_k (fun ~k (xs,acc) -> 
-          match xs with 
-          | [] -> failwith "impossible"
-          | [sym] -> xs@[sym]
-          | x::xs -> k (xs, acc@[x;ws_nnl]))
+    let with_ws (rule:sym list) : sym list = intersperse ws rule
 
     let _ = with_ws
 
@@ -154,9 +155,13 @@ let scala_metagrammar (type sym) p =
     (** RHS *)
 
     let _RHS = nt "RHS"
+        
+    let _BARSEP = nt "BARSEP"
 
     (* bar_sep is: ws_nnl nl ws_nnl "|" ws_nnl *)
-    let _ : unit = p#add_rule _RHS [ p#list_with_sep ~sep:predef#bar_sep _SYM_LIST ]
+    let _ : unit = p#add_rule _BARSEP [ ws_nnl; a"\n"; ws_nnl; a"|"; ws_nnl ]
+    
+    let _ : unit = p#add_rule _RHS [ p#list_with_sep ~sep:_BARSEP _SYM_LIST ]
 
 
 
@@ -196,7 +201,6 @@ let (_ :
           < a : string -> 'sym
           ; any_but : string list -> 'sym
           ; any_of : string list -> 'sym
-          ; bar_sep : 'sym
           ; end_of_input : 'sym
           ; starts_with_lower : 'sym
           ; starts_with_upper : 'sym
@@ -206,3 +210,66 @@ let (_ :
       ; .. > ->
       unit) =
   scala_metagrammar
+
+
+(** Fill in the blanks using P0 2021 *)
+module With_P0 = struct
+  open P0_lib.P0.P0_2021
+
+  let starts_with_lower = exec Re.(seq [lower;rep alnum] |> compile)
+
+  let starts_with_upper = exec Re.(seq [upper;rep alnum] |> compile)
+
+  let tm_counter = ref 1
+  let tm_tbl = Hashtbl.create 10
+  let tm f = 
+    let n = !tm_counter in
+    Hashtbl.add tm_tbl n f;
+    tm_counter:=n+2;
+    n
+
+  let a s = tm (a s)
+  let any_but s = tm (any_but s)
+  let any_of s = tm (any_of s)
+  let end_of_input = -1 (* tm (end_of_input) (* FIXME *) *)
+  let starts_with_upper = tm starts_with_upper
+  let starts_with_lower = tm starts_with_lower
+  let ws = tm ws
+  let ws_nnl = tm ws_nnl
+
+  let predef = object
+    method a = a
+    method any_but = any_but
+    method any_of = any_of
+    method end_of_input = end_of_input
+    method starts_with_lower = starts_with_lower
+    method starts_with_upper = starts_with_upper
+    method ws = ws
+    method ws_nnl = ws_nnl
+  end
+
+  let add_rule s ss = ()
+  let add_rules s xs = ()
+  let list_with_sep ~sep p = -3 (* FIXME *)
+
+  let nt_tbl = Hashtbl.create 10
+  let nt_counter = ref 0
+  let nt s = 
+    let n = !nt_counter in
+    Hashtbl.add nt_tbl s n;
+    nt_counter := n+2;
+    n
+   
+  let p = object
+    method add_rule=add_rule
+    method add_rules=add_rules
+    method list_with_sep=list_with_sep
+    method nt=nt
+    method predef=predef
+  end
+
+  (* FIXME we need a to return a sym, so we need to enumerate
+     terminals as well as nonterms *)
+  let scala_metagrammar = scala_metagrammar p
+  
+end
