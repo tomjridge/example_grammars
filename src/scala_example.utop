@@ -1,0 +1,7 @@
+(* testing scala_example interactively *)
+
+open Example_grammars;;
+open Scala_example;;
+
+open Scala_example.Test;;
+

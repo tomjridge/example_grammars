@@ -1,6 +1,6 @@
 (library 
   (public_name example_grammars)
   (flags (:standard -w -27-8-40-32-39))
-  (preprocessor_deps abnf.pbnf abnf.sexp imap_protocol.abnf)
+  (preprocessor_deps abnf.pbnf abnf.sexp imap_protocol.abnf scala_grammar.ebnf)
   (preprocess (pps ppx_blob ppx_jane))
   (libraries ppx_blob ppx_jane core_kernel p0_lib str))

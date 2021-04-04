@@ -1,6 +1,8 @@
 open Abnf_parser_prelude
 open Abnf_parser_prelude.Abnf_grammar_datatype
 
+let dont_log = true
+
 module Internal_generated_parser
     (Reqs: sig 
        include INTERNAL_REQS 
@@ -64,7 +66,7 @@ module Internal2 = struct
         let x = !free in
         free:=!free+1;
         Hashtbl.replace nt_to_hum_tbl x s;
-        Printf.printf "Non-term %s with id %d\n%!" s x;
+        assert(dont_log || (Printf.printf "Non-term %s with id %d\n%!" s x; true));
         x
 
     type 'a sym = Nt of 'a nt | Tm of string P0.m
