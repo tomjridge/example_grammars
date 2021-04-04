@@ -131,7 +131,7 @@ let scala_metagrammar (type sym) p =
         
     let _ : unit = p#add_rules _TM [
         [predef#starts_with_lower];
-        [_LITERAL]
+        [_LITERAL] 
       ]
 
 
@@ -154,13 +154,6 @@ let scala_metagrammar (type sym) p =
 
 
 
-    (* we allow "symbols" to also include "specials" - options,
-       repetitions etc *)
-    let _ : unit = p#add_rules _SYM [
-        [_NT];
-        [_TM];
-        [_SPECIAL]
-      ]
 
     let _OPTION = nt "OPTION"
 
@@ -190,6 +183,13 @@ let scala_metagrammar (type sym) p =
         [_BRACKET]
       ]
 
+    (* we allow "symbols" to also include "specials" - options,
+       repetitions etc *)
+    let _ : unit = p#add_rules _SYM [
+        [_NT];
+        [_TM];
+        [_SPECIAL]
+      ]
 
 
     (** Sym list *)
@@ -460,9 +460,6 @@ module Test = struct
 
   module With_P0 = With_P0()
   open With_P0
-
-
-  let _ : unit = assert(P0_2021.parse ~debug:true p_starts_with_upper "['-'] integerLiteral" = None)
 
   let test_1 () = 
     Printf.printf "\n\ntest_parse\n";
