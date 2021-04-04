@@ -30,6 +30,8 @@ let scala_grammar_fragment = {|
 
 module P0_2021 = P0_lib.P0_2021
 
+let dont_log = true
+
 (* from Tjr_lib_core.Iter *)
 let iter_k f (x:'a) =
   let rec k x = f ~k x in
@@ -69,7 +71,9 @@ let mk_map_to_list tbl =
 
 
 
-(** Scala metagrammar - the grammar in which the Scala grammar is expressed *)
+(** Scala metagrammar - the grammar in which the Scala grammar is
+   expressed. NOTE this function is completely independent of the
+   parsing details - we fill those in later via the parameter p *)
 let scala_metagrammar (type sym) p = 
   let open (struct
 
@@ -160,7 +164,8 @@ let scala_metagrammar (type sym) p =
 
     let _OPTION = nt "OPTION"
 
-    (** NOTE subrules can be found in options (like the rule for PrefixExpr) and brackets *)
+    (** NOTE subrules can be found in options (like the rule for
+       PrefixExpr) and brackets; subrules are all on one line *)
     let _SUBRULE_BODY = nt "SUBRULE_BODY"
 
     let _ : unit = p#add_rule _SUBRULE_BODY [ p#list_with_sep ~sep:_WSNNL_BAR_WSNNL _SYM_LIST ]
@@ -195,9 +200,9 @@ let scala_metagrammar (type sym) p =
                       |  ‘type’ TypeDef
                       |
 
-NOTE in 3 or 4 places a symlist is allowed to contain syms separated by ws (including nl); we remove these in scala_grammar.ebnf to make it easier to parse.
-
-    *)
+       NOTE in 3 or 4 places a symlist is allowed to contain syms separated
+       by ws (including nl); we remove these in scala_grammar.ebnf to make it
+       easier to parse.  *)
     let _ : unit = p#add_rule _SYM_LIST [ p#list_with_sep ~sep:ws_nnl _SYM ]
         
 
@@ -271,7 +276,7 @@ let (_ :
 module With_P0() = struct
   [@@@warning "-33"]
 
-  open P0_lib.P0
+  (* open P0_lib.P0 *)
   open P0_lib.P0.P0_2021
 
   let p_starts_with_lower = exec Re.(seq [start; rg 'a' 'z';longest (rep alnum)] |> compile)
@@ -410,21 +415,21 @@ module With_P0() = struct
     rules.find nt |> function
     | [] -> failwith (Printf.sprintf "No rules found for nt: %s\n" (pp_nt nt))
     | (xs : int list list) -> 
-      inject (fun s -> 
-          Printf.printf "Parsing nt: %s at position %d\n%!" (pp_nt nt) s.i;
-          run (parse_rules xs) s) 
+      inject (fun s ->
+          assert(dont_log || (Printf.printf "Parsing nt: %s at position %d\n%!" (pp_nt nt) s.i; true));
+          run (parse_rules xs) s)
       >>= fun rs -> return (`Parse_nt(pp_nt nt,rs))
 
   and parse_tm tm = 
-    P0_2021.debug ~msg:(fun st -> 
-        Printf.printf "parse_tm: %d at position %d\n" tm st.i)
+    (* P0_2021.debug ~msg:(fun st -> 
+        Printf.printf "parse_tm: %d at position %d\n" tm st.i) *)
     begin
       tm_find tm |> function
       | `Unit f -> 
         f >>= fun () -> return `Parse_tm_unit
       | `String f -> 
         f >>= fun s -> 
-        Printf.printf "Terminal %d parsed string: (%s)\n%!" tm s;
+        assert(dont_log || (Printf.printf "Terminal %d parsed string: (%s)\n%!" tm s; true));
         return (`Parse_tm_string s)
     end
 
