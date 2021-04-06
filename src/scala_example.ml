@@ -611,11 +611,37 @@ module Handwritten_parser = struct
       m =
   p_GRAMMAR
 
+
+  (** {2 Sexp output} *)
+
+  open Sexplib.Std
+
+  type res = [ `RULE of
+        string
+        * [ `RHS of rhs
+            list
+            list ] ]
+      list 
+
+  and rhs = [ `BRACKET of rhs list list
+             | `LITERAL of string
+             | `NT of string
+             | `OPTION of rhs list list
+             | `REPETITION of rhs list list
+             | `TM of string ]
+  [@@deriving sexp]
+
+  (** NOTE the Scala grammar, as an S-exp, is printed by this test;
+     also available here:
+     https://gist.github.com/tomjridge/dbde806c73c62ca37da8be0c641a197b
+     ; should also be available in the current directory, as
+     scala_grammar.sexp *)
   let test () = 
     Printf.printf "%s: testing hand-written metagrammar parser... " __MODULE__;
     begin 
       parse ~debug:true p_GRAMMAR Blobs.scala_grammar |> function
-      | Some _ -> ()
+      | Some x -> 
+        x |> sexp_of_res |> Base.Sexp.to_string_hum |> print_endline
       | None -> assert(false)
     end;
     Printf.printf "test passed\n";
