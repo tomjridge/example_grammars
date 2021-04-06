@@ -466,7 +466,7 @@ option = parse_grammar
 end
 
 
-module Test = struct
+module Test() = struct
 
   module With_P0 = With_P0()
   open With_P0
@@ -557,9 +557,9 @@ module Handwritten_parser = struct
         so we make everything parametric on SYM, which we fill in
         recursively later *)
 
-    let r = ref @@ inject (fun _ -> failwith __LOC__)
+    let p_SYM_ref = ref @@ inject (fun _ -> failwith __LOC__)
 
-    let p_SYM = inject @@ (fun s -> run (!r) s)
+    let p_SYM = inject @@ (fun s -> run (!p_SYM_ref) s)
 
     let p_SYM_LIST = list ~sep:ws_nnl p_SYM
 
@@ -590,7 +590,7 @@ module Handwritten_parser = struct
     let p_GRAMMAR = seq3 (ws, list ~sep:ws p_RULE, ws) 
         >>= fun (_,xs,_) -> return xs
 
-    let _ : unit = r := alt_list [p_NT;p_TM;p_SPECIAL]
+    let _ : unit = p_SYM_ref := alt_list [p_NT;p_TM;p_SPECIAL]
   end)
 
   let p_GRAMMAR :
