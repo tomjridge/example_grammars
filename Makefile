@@ -8,7 +8,8 @@ run_test:
 	dune exec bin/test.exe
 
 test_scala_example:
-	dune exec bin/test.exe 4
+#	dune exec bin/test.exe 4
+	OCAMLRUNPARAM=b dune exec bin/test.exe 5
 
 test_interactive:
 	cd src && ocaml -init .ocamlinit # then #use "scala_example.utop";;

@@ -148,6 +148,7 @@ let scala_metagrammar (type sym) p =
     (* A subrule of the form S | S | S *)
     let _WSNNL_BAR_WSNNL = nt "WSNNL_BAR_WSNNL"
 
+    (* FIXME should be ws_nnl? *)
     let _ : unit = p#add_rule _WSNNL_BAR_WSNNL [ws; a"|";ws]
 
     let _SYM_LIST = nt "SYM_LIST"
@@ -275,6 +276,7 @@ let (_ :
 (** Fill in the blanks using P0 2021 *)
 module With_P0() = struct
   [@@@warning "-33"]
+
 
   (* open P0_lib.P0 *)
   open P0_lib.P0.P0_2021
@@ -453,6 +455,14 @@ module With_P0() = struct
     let start_symbol = !start_symbol in 
     assert(is_nt start_symbol);
     P0_2021.parse ~debug:true (parse_nt start_symbol) s
+
+  let _ : string ->
+([> `Parse_nt of string * [> `Parse_rules of [> `Parse_syms of 'a list ] ]
+  | `Parse_tm_string of string
+  | `Parse_tm_unit ]
+ as 'a)
+option = parse_grammar
+
 end
 
 
@@ -499,4 +509,116 @@ Literal ::=  [`-`] integerLiteral
 
   let test_12 () = parse_grammar Blobs.scala_grammar
 
+end
+
+
+(** {2 Hand-written metagrammar parser} *)
+
+(* The above is fine, but the results are rather fiddly to interpret,
+   because of the extra level of indirection, and because the results
+   are not specialized. As an alternative, we can write a hand-coded
+   parser. *)
+
+module Handwritten_parser = struct
+
+  open P0_2021
+
+  let ws_nnl = ws_nnl
+
+  let p_starts_with_lower = exec Re.(seq [start; rg 'a' 'z';longest (rep alnum)] |> compile)
+
+  let p_starts_with_upper = exec Re.(seq [start; rg 'A' 'Z';longest (rep alnum)] |> compile)
+
+  let tick_chars = ["'"; "`"]
+
+  let p_WSNNL_BAR_WSNNL = seq_list [ws_nnl;a"|";ws_nnl]
+
+  let p_TICK = any_of tick_chars
+
+  (* avoid type var cannot be generalized by hiding defns *)
+  open (struct
+
+    let p_LITERAL = 
+      seq3 (p_TICK, rep_any_but tick_chars, p_TICK) 
+      >>= fun (_,s,_) -> return (`LITERAL s)
+
+    let p_NT = p_starts_with_upper >>= fun s -> return (`NT s)
+
+    let p_TM = alt_list [
+        (p_starts_with_lower >>= fun s -> return (`TM s)); 
+        p_LITERAL
+      ]
+
+
+    let p_BARSEP = seq_list [ ws_nnl; a"\n"; ws_nnl; a"|"; ws_nnl ] 
+      >>= fun _ -> return `BARSEP
+
+    (** There is a recursion SYM -> SPECIAL -> ... -> SYM_LIST -> SYM;
+        so we make everything parametric on SYM, which we fill in
+        recursively later *)
+
+    let r = ref @@ inject (fun _ -> failwith __LOC__)
+
+    let p_SYM = inject @@ (fun s -> run (!r) s)
+
+    let p_SYM_LIST = list ~sep:ws_nnl p_SYM
+
+    let p_SUBRULE_BODY = list ~sep:p_WSNNL_BAR_WSNNL p_SYM_LIST
+
+    let p_OPTION = 
+      seq5 ( a"[", ws_nnl, p_SUBRULE_BODY, ws_nnl, a"]" )
+      >>= fun (_,_,xs,_,_) -> return (`OPTION xs)
+
+    let p_REPETITION = 
+      seq5 ( a"{", ws_nnl, p_SUBRULE_BODY, ws_nnl, a"}" )
+      >>= fun (_,_,xs,_,_) -> return (`REPETITION xs)
+
+    let p_BRACKET = 
+      seq5 ( a"(", ws_nnl, p_SUBRULE_BODY, ws_nnl, a")" )
+      >>= fun (_,_,xs,_,_) -> return (`BRACKET xs)
+
+    let p_SPECIAL = alt_list [p_OPTION;p_REPETITION;p_BRACKET]
+
+    let p_RHS = list ~sep:p_BARSEP p_SYM_LIST
+      >>= fun xs -> return (`RHS xs)
+
+    (* NOTE we use p_starts_with_upper rather than p_NT to make types
+       more precise *)
+    let p_RULE = seq5 (p_starts_with_upper, ws_nnl, a"::=", ws_nnl, p_RHS) 
+      >>= fun (nt,_,_,_,rhs) -> return (`RULE(nt,rhs))
+
+    let p_GRAMMAR = seq3 (ws, list ~sep:ws p_RULE, ws) 
+        >>= fun (_,xs,_) -> return xs
+
+    let _ : unit = r := alt_list [p_NT;p_TM;p_SPECIAL]
+  end)
+
+  let p_GRAMMAR :
+      [ `RULE of
+        string
+        * [ `RHS of
+            ([ `BRACKET of 'a list list
+             | `LITERAL of string
+             | `NT of string
+             | `OPTION of 'a list list
+             | `REPETITION of 'a list list
+             | `TM of string ]
+             as
+             'a)
+            list
+            list ] ]
+      list
+      m =
+  p_GRAMMAR
+
+  let test () = 
+    Printf.printf "%s: testing hand-written metagrammar parser... " __MODULE__;
+    begin 
+      parse ~debug:true p_GRAMMAR Blobs.scala_grammar |> function
+      | Some _ -> ()
+      | None -> assert(false)
+    end;
+    Printf.printf "test passed\n";
+    ()
+    
 end
